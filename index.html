@@ -3,34 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nitesh Kumar - Geospatial Data Scientist</title>
+    <title>Nitesh Kumar | Geospatial Data Scientist</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header/Navigation -->
-    <header class="header">
-        <nav class="navbar">
-            <div class="logo">Nitesh Kumar</div>
-            <ul class="nav-menu">
-                <li><a href="#home">Home</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#projects">Projects</a></li>
-                <li><a href="#skills">Skills</a></li>
-                <li><a href="#contact">Contact</a></li>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="brand-icon">NK</span>
+                <span class="brand-text">Nitesh Kumar</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#home" class="nav-link active">Home</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#projects" class="nav-link">Projects</a></li>
+                <li><a href="#experience" class="nav-link">Experience</a></li>
+                <li><a href="#skills" class="nav-link">Skills</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
             </ul>
-        </nav>
-    </header>
+        </div>
+    </nav>
 
     <!-- Hero Section -->
     <section id="home" class="hero">
         <div class="hero-content">
-            <h1>Nitesh Kumar</h1>
-            <p class="subtitle">Geospatial Data Scientist & GIS Analyst</p>
-            <p class="tagline">Remote Sensing | Satellite Imagery Analysis | ML for Earth Observation</p>
-            <div class="cta-buttons">
-                <a href="#projects" class="btn btn-primary">View My Work</a>
-                <a href="#contact" class="btn btn-secondary">Get In Touch</a>
+            <div class="hero-text">
+                <h1 class="hero-title">Hi, I'm <span class="highlight">Nitesh Kumar</span></h1>
+                <p class="hero-subtitle">Geospatial Data Scientist & Earth Observation Specialist</p>
+                <p class="hero-description">I transform satellite imagery into actionable insights using machine learning, remote sensing, and advanced GIS techniques</p>
+                <div class="hero-cta">
+                    <a href="#projects" class="btn btn-primary">View My Work</a>
+                    <a href="#contact" class="btn btn-secondary">Get In Touch</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="gradient-orb"></div>
+                <div class="gradient-orb secondary"></div>
             </div>
         </div>
     </section>
@@ -38,29 +48,57 @@
     <!-- About Section -->
     <section id="about" class="about">
         <div class="container">
-            <h2>About Me</h2>
-            <div class="about-content">
-                <div class="about-text">
-                    <p>I'm a Geospatial Data Scientist with expertise in remote sensing, satellite imagery analysis, and machine learning applications for Earth observation. Currently working at SWAN as a GIS Analyst, I develop advanced methodologies for environmental monitoring and agricultural technology.</p>
-                    <p>With a Master's degree in Earth System Science and Engineering from IIT Guwahati and a Bachelor's in Civil Engineering, I combine geospatial analysis with machine learning to solve real-world problems in agriculture, disaster management, and environmental monitoring.</p>
-                    <p>My passion lies in democratizing access to geospatial data through innovative web applications and building scalable solutions for precision agriculture and environmental risk assessment.</p>
+            <h2 class="section-title">About Me</h2>
+            <div class="about-grid">
+                <div class="about-content">
+                    <p>I'm a Geospatial Data Scientist with 2+ years of experience in remote sensing and satellite imagery analysis. My expertise spans from Sentinel-1/2 SAR and optical data processing to advanced machine learning applications in agriculture and disaster management.</p>
+                    <p>Currently at SWAN, I develop cutting-edge solutions for crop monitoring, flood mapping, and environmental change detection. I'm passionate about democratizing geospatial data through innovative web applications and scalable ML models.</p>
+                    <div class="about-highlights">
+                        <div class="highlight-item">
+                            <span class="highlight-number">2+</span>
+                            <span class="highlight-label">Years Experience</span>
+                        </div>
+                        <div class="highlight-item">
+                            <span class="highlight-number">50+</span>
+                            <span class="highlight-label">Projects</span>
+                        </div>
+                        <div class="highlight-item">
+                            <span class="highlight-number">100%</span>
+                            <span class="highlight-label">Dedication</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="about-info">
-                    <div class="info-item">
-                        <span class="info-label">Location:</span>
-                        <span class="info-value">Mumbai, India</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Experience Section -->
+    <section id="experience" class="experience">
+        <div class="container">
+            <h2 class="section-title">Experience</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h3>GIS Analyst</h3>
+                        <p class="role-company">SWAN | June 2024 - Present</p>
+                        <ul>
+                            <li>Developed environmental change detection methodologies using SAR and optical data</li>
+                            <li>Engineered ML models for crop yield prediction and landslide risk assessment</li>
+                            <li>Built geospatial web applications with Streamlit for real-time monitoring</li>
+                        </ul>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Education:</span>
-                        <span class="info-value">M.Tech in Earth System Science (IIT Guwahati)</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Current Role:</span>
-                        <span class="info-value">GIS Analyst at SWAN</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Email:</span>
-                        <span class="info-value"><a href="mailto:nitesh4004@iitg.ac.in">nitesh4004@iitg.ac.in</a></span>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h3>Teaching Assistant</h3>
+                        <p class="role-company">IIT Guwahati | Jan 2023 - May 2024</p>
+                        <ul>
+                            <li>Conducted practical labs on spatial analysis and GIS tools</li>
+                            <li>Mentored students on geospatial algorithms and data modeling</li>
+                            <li>Graded assignments and resolved complex technical queries</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -70,45 +108,58 @@
     <!-- Projects Section -->
     <section id="projects" class="projects">
         <div class="container">
-            <h2>Featured Projects</h2>
+            <h2 class="section-title">Featured Projects</h2>
             <div class="projects-grid">
-                <div class="project-card">
-                    <h3>SpectralNi30 - GIS Analytics Engine</h3>
-                    <p class="tech-stack">Python • Streamlit • Google Earth Engine API</p>
-                    <p class="project-desc">A full-stack geospatial web application democratizing access to optical and SAR data. Features include real-time Vegetation Health Index monitoring, soil moisture retrieval, flood mapping, and automated time-series charting of crop growth cycles.</p>
-                    <div class="project-links">
-                        <a href="https://spectralni30.streamlit.app" target="_blank" class="project-link">Live Demo</a>
-                        <a href="https://github.com/nitesh4004" target="_blank" class="project-link">GitHub</a>
+                <article class="project-card" data-category="web">
+                    <div class="project-header">
+                        <div class="project-icon"><i class="fas fa-globe"></i></div>
+                        <span class="project-tag">Web App</span>
                     </div>
-                </div>
+                    <h3>SpectralNi30</h3>
+                    <p class="project-desc">Full-stack geospatial web application for real-time VHI monitoring and soil moisture retrieval using Google Earth Engine API.</p>
+                    <div class="tech-stack">
+                        <span>Python</span>
+                        <span>Streamlit</span>
+                        <span>GEE</span>
+                    </div>
+                    <div class="project-links">
+                        <a href="https://spectralni30.streamlit.app" target="_blank" class="link-btn">Live Demo <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </article>
 
-                <div class="project-card">
-                    <h3>geoFormatX - Vector Interoperability Engine</h3>
-                    <p class="tech-stack">Python • Streamlit • Geopandas • Rasterio</p>
-                    <p class="project-desc">A serverless geospatial ETL web application automating conversion of vector datasets between Shapefile, GeoJSON, and KML formats. Solves CRS reprojection issues for seamless interoperability between legacy cadastral data and modern precision agriculture tools.</p>
-                    <div class="project-links">
-                        <a href="https://geoformatx.streamlit.app" target="_blank" class="project-link">Live Demo</a>
-                        <a href="https://github.com/nitesh4004" target="_blank" class="project-link">GitHub</a>
+                <article class="project-card" data-category="ml">
+                    <div class="project-header">
+                        <div class="project-icon"><i class="fas fa-network-wired"></i></div>
+                        <span class="project-tag">ML Model</span>
                     </div>
-                </div>
+                    <h3>Crop Yield Forecasting</h3>
+                    <p class="project-desc">ML-based predictive models for crop yield using thermal and optical remote sensing data across multiple growth stages.</p>
+                    <div class="tech-stack">
+                        <span>Python</span>
+                        <span>Sentinel</span>
+                        <span>XGBoost</span>
+                    </div>
+                    <div class="project-links">
+                        <a href="#" class="link-btn">GitHub <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </article>
 
-                <div class="project-card">
-                    <h3>Machine Learning-Based Crop Yield Forecasting</h3>
-                    <p class="tech-stack">Python • Sentinel-1/2 • Machine Learning</p>
-                    <p class="project-desc">Developed predictive models for crop yield forecasting using thermal and optical remote sensing data. Built data pipelines to predict sugarcane yield across growth stages, assisting farmers with targeted irrigation and nutrient planning.</p>
-                    <div class="project-links">
-                        <a href="https://github.com/nitesh4004" target="_blank" class="project-link">GitHub</a>
+                <article class="project-card" data-category="web">
+                    <div class="project-header">
+                        <div class="project-icon"><i class="fas fa-exchange-alt"></i></div>
+                        <span class="project-tag">ETL Tool</span>
                     </div>
-                </div>
-
-                <div class="project-card">
-                    <h3>Environmental Risk Assessment using Hyperspectral Data</h3>
-                    <p class="tech-stack">Python • PRISMA • Machine Learning</p>
-                    <p class="project-desc">Applied machine learning models for surface anomaly detection using PRISMA hyperspectral datasets. Demonstrated utility of narrow-band spectral analysis for identifying stress markers in vegetation and soil contamination.</p>
-                    <div class="project-links">
-                        <a href="https://github.com/nitesh4004" target="_blank" class="project-link">GitHub</a>
+                    <h3>geoFormatX</h3>
+                    <p class="project-desc">Serverless geospatial ETL for seamless vector format conversion and CRS reprojection automation.</p>
+                    <div class="tech-stack">
+                        <span>Geopandas</span>
+                        <span>Rasterio</span>
+                        <span>Streamlit</span>
                     </div>
-                </div>
+                    <div class="project-links">
+                        <a href="https://geoformatx.streamlit.app" target="_blank" class="link-btn">Live Demo <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </article>
             </div>
         </div>
     </section>
@@ -116,70 +167,43 @@
     <!-- Skills Section -->
     <section id="skills" class="skills">
         <div class="container">
-            <h2>Technical Skills</h2>
-            <div class="skills-grid">
+            <h2 class="section-title">Technical Arsenal</h2>
+            <div class="skills-matrix">
                 <div class="skill-category">
-                    <h3>Geospatial Analysis</h3>
-                    <ul class="skill-list">
-                        <li>Crop Phenology & Yield Modeling</li>
-                        <li>Soil Moisture Retrieval</li>
-                        <li>Flood Mapping & Disaster Analysis</li>
-                        <li>Land Susceptibility Mapping</li>
-                        <li>LULC Classification</li>
-                    </ul>
+                    <h3><i class="fas fa-satellite"></i> Remote Sensing</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">Sentinel-1/2 Processing</div>
+                        <div class="skill-item">SAR Analysis</div>
+                        <div class="skill-item">NDVI/EVI/NDWI Indices</div>
+                        <div class="skill-item">Hyperspectral Data</div>
+                    </div>
                 </div>
-
                 <div class="skill-category">
-                    <h3>Programming Languages</h3>
-                    <ul class="skill-list">
-                        <li>Python (NumPy, Pandas, Geopandas, Rasterio, eo-learn)</li>
-                        <li>JavaScript (Google Earth Engine API)</li>
-                        <li>SQL</li>
-                        <li>GDAL/OGR</li>
-                    </ul>
+                    <h3><i class="fas fa-code"></i> Programming</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">Python</div>
+                        <div class="skill-item">JavaScript (GEE)</div>
+                        <div class="skill-item">SQL</div>
+                        <div class="skill-item">GDAL/OGR</div>
+                    </div>
                 </div>
-
                 <div class="skill-category">
-                    <h3>Machine Learning</h3>
-                    <ul class="skill-list">
-                        <li>Random Forest & XGBoost</li>
-                        <li>Support Vector Machines (SVM)</li>
-                        <li>Time-Series Classification</li>
-                        <li>Regression Modeling</li>
-                        <li>Deep Learning</li>
-                    </ul>
+                    <h3><i class="fas fa-brain"></i> ML & AI</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">Random Forest</div>
+                        <div class="skill-item">XGBoost</div>
+                        <div class="skill-item">Time-Series</div>
+                        <div class="skill-item">Deep Learning</div>
+                    </div>
                 </div>
-
                 <div class="skill-category">
-                    <h3>Tools & Platforms</h3>
-                    <ul class="skill-list">
-                        <li>Google Earth Engine</li>
-                        <li>QGIS & ArcGIS Pro</li>
-                        <li>SNAP SAR Toolbox</li>
-                        <li>Streamlit</li>
-                        <li>Jupyter Notebooks</li>
-                    </ul>
-                </div>
-
-                <div class="skill-category">
-                    <h3>Satellite Data</h3>
-                    <ul class="skill-list">
-                        <li>Sentinel-1 (SAR) & Sentinel-2 (Optical)</li>
-                        <li>Vegetation Indices (NDVI, EVI, NDWI, NDMI)</li>
-                        <li>Thermal Data Processing</li>
-                        <li>Hyperspectral Analysis</li>
-                        <li>DEM & Elevation Data</li>
-                    </ul>
-                </div>
-
-                <div class="skill-category">
-                    <h3>Web Development</h3>
-                    <ul class="skill-list">
-                        <li>FastAPI</li>
-                        <li>Streamlit</li>
-                        <li>HTML/CSS/JavaScript</li>
-                        <li>Git & GitHub</li>
-                    </ul>
+                    <h3><i class="fas fa-map"></i> GIS Tools</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">QGIS</div>
+                        <div class="skill-item">ArcGIS Pro</div>
+                        <div class="skill-item">Google Earth Engine</div>
+                        <div class="skill-item">SNAP Toolbox</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -188,22 +212,22 @@
     <!-- Contact Section -->
     <section id="contact" class="contact">
         <div class="container">
-            <h2>Get In Touch</h2>
-            <p class="contact-intro">I'm always interested in discussing geospatial projects, machine learning applications in Earth observation, and collaboration opportunities. Feel free to reach out!</p>
-            <div class="contact-links">
-                <a href="mailto:nitesh4004@iitg.ac.in" class="contact-card">
-                    <i class="fas fa-envelope"></i>
-                    <span>Email</span>
+            <h2 class="section-title">Let's Connect</h2>
+            <p class="section-subtitle">I'm always open to discussing geospatial projects and collaboration opportunities</p>
+            <div class="contact-grid">
+                <a href="mailto:nitesh4004@iitg.ac.in" class="contact-box">
+                    <div class="contact-icon"><i class="fas fa-envelope"></i></div>
+                    <h3>Email</h3>
                     <p>nitesh4004@iitg.ac.in</p>
                 </a>
-                <a href="https://www.linkedin.com/in/nitesh4004" target="_blank" class="contact-card">
-                    <i class="fab fa-linkedin"></i>
-                    <span>LinkedIn</span>
+                <a href="https://linkedin.com/in/nitesh4004" target="_blank" class="contact-box">
+                    <div class="contact-icon"><i class="fab fa-linkedin"></i></div>
+                    <h3>LinkedIn</h3>
                     <p>linkedin.com/in/nitesh4004</p>
                 </a>
-                <a href="https://github.com/nitesh4004" target="_blank" class="contact-card">
-                    <i class="fab fa-github"></i>
-                    <span>GitHub</span>
+                <a href="https://github.com/nitesh4004" target="_blank" class="contact-box">
+                    <div class="contact-icon"><i class="fab fa-github"></i></div>
+                    <h3>GitHub</h3>
                     <p>github.com/nitesh4004</p>
                 </a>
             </div>
@@ -213,7 +237,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2025 Nitesh Kumar. All rights reserved. | Geospatial Data Scientist</p>
+            <p>&copy; 2025 Nitesh Kumar. Crafted with <i class="fas fa-heart"></i> for Earth Observation</p>
         </div>
     </footer>
 
