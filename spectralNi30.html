@@ -1,315 +1,365 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>specTralNi30 - Geospatial Data Science Platform</title>
+    <title>SpecTralNi30 | Geospatial Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+        :root {
+            --neon-cyan: #06b6d4;
+            --neon-green: #10b981;
+            --deep-space: #0f172a;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--deep-space);
+            color: #e2e8f0;
+            overflow-x: hidden;
         }
 
-        header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 1rem 0;
-            position: sticky;
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Grid Background for sections */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        }
+
+        /* Animations */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.5); }
+        }
+
+        .btn-glow:hover {
+            animation: pulse-glow 2s infinite;
+        }
+
+        #bg-canvas {
+            position: fixed;
             top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: #ffd700;
-        }
-
-        .hero {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 100px 20px;
-            text-align: center;
-            min-height: 600px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .hero-content h1 {
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .hero-content p {
-            font-size: 1.3rem;
-            margin-bottom: 2rem;
-            opacity: 0.95;
-        }
-
-        .cta-button {
-            display: inline-block;
-            background-color: #ffd700;
-            color: #1e3c72;
-            padding: 15px 40px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            margin: 0 10px;
-        }
-
-        .cta-button:hover {
-            background-color: #ffed4e;
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(255,215,0,0.4);
-        }
-
-        .section {
-            padding: 80px 20px;
-            background: white;
-            margin-bottom: 2rem;
-        }
-
-        .section:nth-child(even) {
-            background: #f8f9fa;
-        }
-
-        h2 {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 3rem;
-            color: #1e3c72;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .card {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            border-color: #2a5298;
-        }
-
-        .card-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .card h3 {
-            color: #2a5298;
-            margin-bottom: 1rem;
-            font-size: 1.5rem;
-        }
-
-        .card p {
-            color: #666;
-            line-height: 1.8;
-        }
-
-        .card-link {
-            display: inline-block;
-            margin-top: 1rem;
-            color: #2a5298;
-            text-decoration: none;
-            font-weight: bold;
-            transition: color 0.3s ease;
-        }
-
-        .card-link:hover {
-            color: #ffd700;
-        }
-
-        footer {
-            background-color: #1e3c72;
-            color: white;
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .tech-stack {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .tech-badge {
-            background: #2a5298;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .hero-content h1 {
-                font-size: 2rem;
-            }
-            .nav-links {
-                gap: 1rem;
-            }
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -10;
+            opacity: 0.8;
+            pointer-events: none;
         }
     </style>
 </head>
-<body>
-    <header>
-        <nav class="container">
-            <div class="logo">specTralNi30</div>
-            <ul class="nav-links">
-                <li><a href="#home">Home</a></li>
-                <li><a href="#apps">Our Apps</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#contact">Contact</a></li>
-            </ul>
-        </nav>
-    </header>
+<body class="antialiased selection:bg-cyan-500 selection:text-white">
 
-    <section id="home" class="hero">
-        <div class="hero-content">
-            <h1>specTralNi30</h1>
-            <p>Advanced Geospatial Data Science Platform</p>
-            <p style="font-size: 1.1rem; opacity: 0.9;">Unlocking Earth's secrets through satellite imagery, remote sensing, and advanced spatial analysis</p>
-            <a href="#apps" class="cta-button">Explore Our Apps</a>
-        </div>
-    </section>
+    <!-- 3D Background Container -->
+    <div id="bg-canvas"></div>
 
-    <section id="apps" class="section">
-        <div class="container">
-            <h2>Our Web Applications</h2>
-            <div class="grid">
-                <div class="card">
-                    <div class="card-icon">🛰️</div>
-                    <h3>specTralNi30</h3>
-                    <p>Advanced satellite image analysis and processing tool. Perform NDVI calculations, change detection, and land cover classification on real satellite data.</p>
-                    <a href="https://spectralni30.streamlit.app/" class="card-link" target="_blank">Launch App →</a>
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass-panel border-b border-slate-800/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="globe-2" class="h-8 w-8 text-cyan-400"></i>
+                    <span class="font-bold text-2xl tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-emerald-400">
+                        SpecTralNi30
+                    </span>
                 </div>
-                <div class="card">
-                    <div class="card-icon">🗺️</div>
-                    <h3>GeoFormatX</h3>
-                    <p>Geospatial data format conversion and transformation tool. Convert between GeoTIFF, Shapefile, GeoJSON, and other formats with advanced preprocessing options.</p>
-                    <a href="https://geoformatx.streamlit.app/" class="card-link" target="_blank">Launch App →</a>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="#home" class="hover:text-cyan-400 transition-colors px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                        <a href="#about" class="hover:text-cyan-400 transition-colors px-3 py-2 rounded-md text-sm font-medium">Mission</a>
+                        <a href="#products" class="hover:text-cyan-400 transition-colors px-3 py-2 rounded-md text-sm font-medium">Solutions</a>
+                        <a href="#contact" class="bg-cyan-500/10 text-cyan-400 border border-cyan-500/50 hover:bg-cyan-500 hover:text-white px-4 py-2 rounded-full text-sm font-medium transition-all btn-glow">
+                            Connect
+                        </a>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-icon">📍</div>
-                    <h3>KaMaL</h3>
-                    <p>KML Boundary Maker - Create, edit, and generate KML files for geographic boundaries. Perfect for defining study areas and region of interest (ROI) mapping.</p>
-                    <a href="kamal.html" class="card-link">Launch App →</a>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-btn" class="text-gray-300 hover:text-white p-2">
+                        <i data-lucide="menu" class="h-6 w-6"></i>
+                    </button>
                 </div>
             </div>
         </div>
-    </section>
 
-    <section id="about" class="section">
-        <div class="container">
-            <h2>Why specTralNi30?</h2>
-            <div class="grid" style="grid-template-columns: 1fr 1fr;">
-                <div>
-                    <h3 style="color: #2a5298; margin-bottom: 1rem;">🌍 Mission</h3>
-                    <p>We're dedicated to making geospatial data science accessible, powerful, and easy to use. Our tools help researchers, scientists, and professionals tackle complex spatial problems.</p>
-                </div>
-                <div>
-                    <h3 style="color: #2a5298; margin-bottom: 1rem;">🚀 Technology</h3>
-                    <p>Built with cutting-edge technologies including Python, Streamlit, GDAL, and modern web frameworks. Our platforms leverage the latest in open-source geospatial libraries.</p>
-                </div>
-                <div>
-                    <h3 style="color: #2a5298; margin-bottom: 1rem;">📊 Features</h3>
-                    <p>Multi-spectral image analysis, vector data processing, format conversion, spatial statistics, and interactive visualization all in one platform.</p>
-                </div>
-                <div>
-                    <h3 style="color: #2a5298; margin-bottom: 1rem;">🔬 Applications</h3>
-                    <p>Environmental monitoring, urban planning, agriculture, disaster management, climate research, and many more geospatial applications.</p>
-                </div>
+        <!-- Mobile Menu Panel -->
+        <div id="mobile-menu" class="hidden md:hidden bg-slate-900 border-b border-slate-800">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#home" class="text-gray-300 hover:text-cyan-400 block px-3 py-2 rounded-md text-base font-medium">Home</a>
+                <a href="#about" class="text-gray-300 hover:text-cyan-400 block px-3 py-2 rounded-md text-base font-medium">Mission</a>
+                <a href="#products" class="text-gray-300 hover:text-cyan-400 block px-3 py-2 rounded-md text-base font-medium">Solutions</a>
+                <a href="#contact" class="text-cyan-400 block px-3 py-2 rounded-md text-base font-medium">Connect</a>
             </div>
         </div>
-    </section>
+    </nav>
 
-    <section class="section">
-        <div class="container">
-            <h2>Technologies We Use</h2>
-            <div class="tech-stack">
-                <span class="tech-badge">Python</span>
-                <span class="tech-badge">Streamlit</span>
-                <span class="tech-badge">GDAL/OGR</span>
-                <span class="tech-badge">GeoPandas</span>
-                <span class="tech-badge">Rasterio</span>
-                <span class="tech-badge">Folium</span>
-                <span class="tech-badge">NumPy</span>
-                <span class="tech-badge">Scikit-learn</span>
-                <span class="tech-badge">HTML5/CSS3</span>
+    <!-- Hero Section -->
+    <section id="home" class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel border border-cyan-500/30 text-cyan-300 text-sm font-mono mb-8 animate-fade-in-up">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                </span>
+                Next-Gen Geospatial Intelligence
             </div>
-        </div>
-    </section>
-
-    <section id="contact" class="section">
-        <div class="container">
-            <h2>Get Started Today</h2>
-            <p style="text-align: center; font-size: 1.1rem; max-width: 600px; margin: 2rem auto;">
-                Start exploring geospatial data with our powerful, user-friendly applications. No installation required - just click and start analyzing!
+            
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-6">
+                Decoding the World with <br/>
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-400">Spatial Data Science</span>
+            </h1>
+            
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-slate-400">
+                SpecTralNi30 empowers researchers and developers with advanced tools for spectral analysis, format conversion, and interactive mapping.
             </p>
-            <div style="text-align: center;">
-                <a href="#apps" class="cta-button">Explore Applications</a>
+
+            <div class="mt-10 flex justify-center gap-4">
+                <a href="#products" class="group relative px-8 py-3 bg-cyan-500 text-white font-semibold rounded-lg overflow-hidden transition-all hover:scale-105 shadow-lg shadow-cyan-500/25">
+                    <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1s_infinite]"></div>
+                    Explore Apps
+                </a>
+                <a href="https://github.com/nitesh4004" target="_blank" class="px-8 py-3 bg-slate-800 text-white font-semibold rounded-lg border border-slate-700 hover:bg-slate-700 transition-all flex items-center gap-2">
+                    <i data-lucide="github" class="h-5 w-5"></i> GitHub
+                </a>
             </div>
         </div>
     </section>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 specTralNi30 - Geospatial Data Science Platform</p>
-            <p>Making geospatial analysis accessible to everyone</p>
+    <!-- About Section -->
+    <section id="about" class="py-20 bg-slate-900/50 border-y border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
+                <div>
+                    <h2 class="text-3xl font-bold text-white mb-6">Bridging the Gap Between <span class="text-cyan-400">Raw Data</span> and <span class="text-emerald-400">Insight</span></h2>
+                    <p class="text-slate-400 mb-6 leading-relaxed">
+                        At SpecTralNi30, we specialize in processing complex geospatial datasets. From satellite imagery spectral analysis to seamless vector format transformations, our suite of tools is designed to streamline the modern GIS workflow.
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <div class="p-2 bg-cyan-500/10 rounded-lg text-cyan-400"><i data-lucide="layers"></i></div>
+                            <span>Multi-layer Spectral Analysis</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400"><i data-lucide="file-json"></i></div>
+                            <span>Universal Format Interoperability</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <div class="p-2 bg-purple-500/10 rounded-lg text-purple-400"><i data-lucide="cpu"></i></div>
+                            <span>Cloud-Native Processing</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="products" class="py-20 bg-grid relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-white mb-4">Our Suite of Tools</h2>
+                <p class="text-slate-400 max-w-2xl mx-auto">Powerful, web-based solutions for geospatial professionals.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                
+                <!-- Product 1: SpecTralNi30 -->
+                <div class="group glass-panel rounded-2xl p-8 hover:bg-slate-800/80 transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-cyan-500">
+                    <div class="h-12 w-12 bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="activity" class="h-6 w-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">SpecTralNi30</h3>
+                    <p class="text-slate-400 text-sm mb-6 h-20">
+                        Advanced spectral analysis platform. Analyze vegetation indices, water bodies, and urbanization trends using multi-band satellite imagery directly in your browser.
+                    </p>
+                    <a href="https://spectralni30.streamlit.app/" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-700 hover:bg-cyan-600 text-white rounded-lg transition-colors font-medium">
+                        Launch App <i data-lucide="external-link" class="h-4 w-4"></i>
+                    </a>
+                </div>
+
+                <!-- Product 2: GeoFormatX -->
+                <div class="group glass-panel rounded-2xl p-8 hover:bg-slate-800/80 transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-emerald-500">
+                    <div class="h-12 w-12 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="file-code" class="h-6 w-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">GeoFormatX</h3>
+                    <p class="text-slate-400 text-sm mb-6 h-20">
+                        The ultimate geospatial converter. Seamlessly transform Shapefiles, KML, GeoJSON, and CSVs. Ensure your data is compatible with any GIS software.
+                    </p>
+                    <a href="https://geoformatx.streamlit.app/" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-700 hover:bg-emerald-600 text-white rounded-lg transition-colors font-medium">
+                        Launch App <i data-lucide="external-link" class="h-4 w-4"></i>
+                    </a>
+                </div>
+
+                <!-- Product 3: KaMaL -->
+                <div class="group glass-panel rounded-2xl p-8 hover:bg-slate-800/80 transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-purple-500">
+                    <div class="h-12 w-12 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="map" class="h-6 w-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">KaMaL</h3>
+                    <p class="text-slate-400 text-sm mb-6 h-20">
+                        Interactive geospatial web module. Visualize custom datasets and layers with a lightweight, responsive HTML map interface. Live and ready to use.
+                    </p>
+                    <a href="https://nitesh4004.github.io/kamal.html" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-700 hover:bg-purple-600 text-white rounded-lg transition-colors font-medium">
+                        Launch App <i data-lucide="external-link" class="h-4 w-4"></i>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact" class="bg-slate-900 border-t border-slate-800 pt-12 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8">
+                <div class="flex items-center gap-2 mb-4 md:mb-0">
+                    <i data-lucide="globe-2" class="h-6 w-6 text-cyan-400"></i>
+                    <span class="font-bold text-xl text-white">SpecTralNi30</span>
+                </div>
+                <div class="flex gap-6">
+                    <a href="#" class="text-slate-400 hover:text-white transition-colors"><i data-lucide="twitter" class="h-5 w-5"></i></a>
+                    <a href="https://github.com/nitesh4004" class="text-slate-400 hover:text-white transition-colors"><i data-lucide="github" class="h-5 w-5"></i></a>
+                    <a href="#" class="text-slate-400 hover:text-white transition-colors"><i data-lucide="linkedin" class="h-5 w-5"></i></a>
+                </div>
+            </div>
+            <div class="text-center md:text-left border-t border-slate-800 pt-8">
+                <p class="text-slate-500 text-sm">&copy; 2025 SpecTralNi30. All rights reserved. <br class="md:hidden"> Powered by Geospatial Science.</p>
+            </div>
         </div>
     </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Mobile Menu Toggle
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // ---------------------------------------------
+        // Three.js Digital Terrain (Lidar Scan)
+        // ---------------------------------------------
+        const container = document.getElementById('bg-canvas');
+        let scene, camera, renderer, terrain;
+        let count = 0;
+
+        function init() {
+            scene = new THREE.Scene();
+            // Fog to fade the terrain into the background distance
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.05);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            // Angled view like a drone/satellite looking down
+            camera.position.z = 20;
+            camera.position.y = 5;
+            camera.rotation.x = -0.3;
+
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Create Terrain Geometry (Wireframe Grid)
+            // Width, Height, SegmentsW, SegmentsH
+            const geometry = new THREE.PlaneGeometry(60, 40, 50, 40);
+
+            // Create Material (Wireframe)
+            const material = new THREE.MeshBasicMaterial({ 
+                color: 0x06b6d4, // Neon Cyan
+                wireframe: true,
+                transparent: true,
+                opacity: 0.2
+            });
+
+            terrain = new THREE.Mesh(geometry, material);
+            scene.add(terrain);
+
+            // Create Points (Lidar dots effect overlaid on wireframe)
+            const pointsMaterial = new THREE.PointsMaterial({
+                color: 0x10b981, // Emerald Green
+                size: 0.15,
+                transparent: true,
+                opacity: 0.6
+            });
+            const points = new THREE.Points(geometry, pointsMaterial);
+            scene.add(points);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            count += 0.02;
+
+            // Animate Terrain Vertices (Wave Effect)
+            const positionAttribute = terrain.geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+
+            for (let i = 0; i < positionAttribute.count; i++) {
+                vertex.fromBufferAttribute(positionAttribute, i);
+                
+                // Perlin-like noise using Sine waves
+                // Modify Z height based on X and Y position + time
+                const z = Math.sin(vertex.x * 0.5 + count) * 1.5 + Math.sin(vertex.y * 0.5 + count) * 1.5;
+                
+                positionAttribute.setZ(i, z);
+            }
+            positionAttribute.needsUpdate = true;
+            
+            // Move terrain slightly to simulate flying
+            terrain.rotation.z = 0.002 * Math.sin(count * 0.1);
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.addEventListener('resize', onWindowResize, false);
+        init();
+    </script>
 </body>
 </html>
