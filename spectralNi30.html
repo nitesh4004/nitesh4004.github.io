@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>specTralNi30 - Geospatial Data Science Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #ffd700;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero-content p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #ffd700;
+            color: #1e3c72;
+            padding: 15px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+
+        .cta-button:hover {
+            background-color: #ffed4e;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255,215,0,0.4);
+        }
+
+        .section {
+            padding: 80px 20px;
+            background: white;
+            margin-bottom: 2rem;
+        }
+
+        .section:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #1e3c72;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-color: #2a5298;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .card h3 {
+            color: #2a5298;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .card p {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .card-link {
+            display: inline-block;
+            margin-top: 1rem;
+            color: #2a5298;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .card-link:hover {
+            color: #ffd700;
+        }
+
+        footer {
+            background-color: #1e3c72;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .tech-badge {
+            background: #2a5298;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2rem;
+            }
+            .nav-links {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">specTralNi30</div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#apps">Our Apps</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>specTralNi30</h1>
+            <p>Advanced Geospatial Data Science Platform</p>
+            <p style="font-size: 1.1rem; opacity: 0.9;">Unlocking Earth's secrets through satellite imagery, remote sensing, and advanced spatial analysis</p>
+            <a href="#apps" class="cta-button">Explore Our Apps</a>
+        </div>
+    </section>
+
+    <section id="apps" class="section">
+        <div class="container">
+            <h2>Our Web Applications</h2>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-icon">🛰️</div>
+                    <h3>specTralNi30</h3>
+                    <p>Advanced satellite image analysis and processing tool. Perform NDVI calculations, change detection, and land cover classification on real satellite data.</p>
+                    <a href="https://spectralni30.streamlit.app/" class="card-link" target="_blank">Launch App →</a>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🗺️</div>
+                    <h3>GeoFormatX</h3>
+                    <p>Geospatial data format conversion and transformation tool. Convert between GeoTIFF, Shapefile, GeoJSON, and other formats with advanced preprocessing options.</p>
+                    <a href="https://geoformatx.streamlit.app/" class="card-link" target="_blank">Launch App →</a>
+                </div>
+                <div class="card">
+                    <div class="card-icon">📍</div>
+                    <h3>KaMaL</h3>
+                    <p>KML Boundary Maker - Create, edit, and generate KML files for geographic boundaries. Perfect for defining study areas and region of interest (ROI) mapping.</p>
+                    <a href="kamal.html" class="card-link">Launch App →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="section">
+        <div class="container">
+            <h2>Why specTralNi30?</h2>
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
+                <div>
+                    <h3 style="color: #2a5298; margin-bottom: 1rem;">🌍 Mission</h3>
+                    <p>We're dedicated to making geospatial data science accessible, powerful, and easy to use. Our tools help researchers, scientists, and professionals tackle complex spatial problems.</p>
+                </div>
+                <div>
+                    <h3 style="color: #2a5298; margin-bottom: 1rem;">🚀 Technology</h3>
+                    <p>Built with cutting-edge technologies including Python, Streamlit, GDAL, and modern web frameworks. Our platforms leverage the latest in open-source geospatial libraries.</p>
+                </div>
+                <div>
+                    <h3 style="color: #2a5298; margin-bottom: 1rem;">📊 Features</h3>
+                    <p>Multi-spectral image analysis, vector data processing, format conversion, spatial statistics, and interactive visualization all in one platform.</p>
+                </div>
+                <div>
+                    <h3 style="color: #2a5298; margin-bottom: 1rem;">🔬 Applications</h3>
+                    <p>Environmental monitoring, urban planning, agriculture, disaster management, climate research, and many more geospatial applications.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <h2>Technologies We Use</h2>
+            <div class="tech-stack">
+                <span class="tech-badge">Python</span>
+                <span class="tech-badge">Streamlit</span>
+                <span class="tech-badge">GDAL/OGR</span>
+                <span class="tech-badge">GeoPandas</span>
+                <span class="tech-badge">Rasterio</span>
+                <span class="tech-badge">Folium</span>
+                <span class="tech-badge">NumPy</span>
+                <span class="tech-badge">Scikit-learn</span>
+                <span class="tech-badge">HTML5/CSS3</span>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="section">
+        <div class="container">
+            <h2>Get Started Today</h2>
+            <p style="text-align: center; font-size: 1.1rem; max-width: 600px; margin: 2rem auto;">
+                Start exploring geospatial data with our powerful, user-friendly applications. No installation required - just click and start analyzing!
+            </p>
+            <div style="text-align: center;">
+                <a href="#apps" class="cta-button">Explore Applications</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 specTralNi30 - Geospatial Data Science Platform</p>
+            <p>Making geospatial analysis accessible to everyone</p>
+        </div>
+    </footer>
+</body>
+</html>
