@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>specTralNi30 - Geospatial Data Science Platform</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">specTralNi30</h1>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link">Home</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#services" class="nav-link">Services</a></li>
+                <li><a href="#projects" class="nav-link">Projects</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h2>Welcome to specTralNi30</h2>
+            <p>Exploring the Future of Geospatial Data Science</p>
+            <p class="hero-subtitle">Analyzing satellite imagery, mapping terrain, and unlocking insights from spatial data</p>
+            <a href="#services" class="cta-button">Get Started</a>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <h2>About specTralNi30</h2>
+            <p>specTralNi30 is a comprehensive geospatial data science platform dedicated to advancing Earth observation technologies and spatial analysis methods. Our mission is to harness the power of satellite data, remote sensing, and GIS technologies to solve real-world problems.</p>
+            <div class="about-grid">
+                <div class="about-card">
+                    <h3>Satellite Analysis</h3>
+                    <p>Advanced processing of multispectral and hyperspectral satellite imagery for environmental monitoring and resource management.</p>
+                </div>
+                <div class="about-card">
+                    <h3>GIS Mapping</h3>
+                    <p>Create detailed geographic information systems for urban planning, land use classification, and disaster management.</p>
+                </div>
+                <div class="about-card">
+                    <h3>Data Visualization</h3>
+                    <p>Interactive maps and dashboards to visualize complex spatial relationships and temporal changes in geographic data.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="services">
+        <div class="container">
+            <h2>Our Services</h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">🛰️</div>
+                    <h3>Remote Sensing</h3>
+                    <p>Process and analyze satellite imagery to extract valuable insights about Earth's surface, vegetation, and water bodies.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🗺️</div>
+                    <h3>Spatial Analysis</h3>
+                    <p>Perform spatial statistical analysis to identify patterns, correlations, and trends in geographic data.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">📊</div>
+                    <h3>Data Processing</h3>
+                    <p>Clean, transform, and prepare large geospatial datasets for analysis and machine learning applications.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🌍</div>
+                    <h3>Land Cover Classification</h3>
+                    <p>Classify satellite imagery to identify urban areas, forests, agriculture, water bodies, and other land cover types.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🔍</div>
+                    <h3>Change Detection</h3>
+                    <p>Monitor environmental changes, urban expansion, deforestation, and natural disasters using temporal satellite data.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">📈</div>
+                    <h3>Predictive Modeling</h3>
+                    <p>Build machine learning models to predict future spatial patterns and environmental changes.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="projects">
+        <div class="container">
+            <h2>Featured Projects</h2>
+            <div class="projects-grid">
+                <div class="project-card">
+                    <div class="project-image">🌱</div>
+                    <h3>Forest Cover Mapping</h3>
+                    <p>Automated classification of forest types and density mapping across multi-temporal satellite data for biodiversity assessment.</p>
+                    <span class="project-tag">Remote Sensing</span>
+                    <span class="project-tag">Classification</span>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">🏙️</div>
+                    <h3>Urban Growth Monitoring</h3>
+                    <p>Track urban expansion and infrastructure development using high-resolution satellite imagery and machine learning.</p>
+                    <span class="project-tag">Change Detection</span>
+                    <span class="project-tag">Urban Planning</span>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">💧</div>
+                    <h3>Water Quality Assessment</h3>
+                    <p>Monitor water bodies and assess quality parameters using spectral analysis of satellite data.</p>
+                    <span class="project-tag">Spectral Analysis</span>
+                    <span class="project-tag">Environmental</span>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">🌾</div>
+                    <h3>Crop Health Monitoring</h3>
+                    <p>Assess agricultural productivity and crop health through NDVI and vegetation indices from satellite imagery.</p>
+                    <span class="project-tag">Agriculture</span>
+                    <span class="project-tag">NDVI</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2>Get In Touch</h2>
+            <p>Interested in geospatial data science projects? Contact us to discuss your needs.</p>
+            <form class="contact-form" onsubmit="handleSubmit(event)">
+                <input type="text" placeholder="Your Name" required>
+                <input type="email" placeholder="Your Email" required>
+                <textarea placeholder="Your Message" rows="5" required></textarea>
+                <button type="submit" class="submit-btn">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 specTralNi30 - Geospatial Data Science Platform. All rights reserved.</p>
+            <p>Powered by satellite data science and Earth observation technologies.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
