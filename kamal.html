@@ -474,6 +474,34 @@
                 </div>
                 <!-- Hidden Upload Input -->
                 <input type="file" id="kmlFileInput" accept=".kml" style="display: none;" onchange="handleFileUpload(this)">
+
+                <!-- NEW: Toolbar Adjustments -->
+                <div class="mt-4 border-t border-slate-700 pt-3">
+                    <div class="text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Map Controls</div>
+                    
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm text-gray-300 flex items-center gap-2">
+                            <i class="fa-solid fa-toolbox text-cyan-500"></i> Draw Tools
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="showToolbar" class="sr-only peer" checked onchange="updateToolbarSettings()">
+                            <div class="w-8 h-4 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm text-gray-300 flex items-center gap-2">
+                            <i class="fa-solid fa-arrows-up-down-left-right text-cyan-500"></i> Position
+                        </label>
+                        <select id="toolbarPos" class="bg-slate-700 text-white text-xs rounded border border-slate-600 p-1 focus:border-cyan-500 outline-none w-24" onchange="updateToolbarSettings()">
+                            <option value="topleft" selected>Top Left</option>
+                            <option value="topright">Top Right</option>
+                            <option value="bottomleft">Bottom Left</option>
+                            <option value="bottomright">Bottom Right</option>
+                        </select>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -589,28 +617,46 @@
         // 3. Drawing Features
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
+        
+        // --- NEW: Dynamic Draw Control Logic ---
+        var drawControl;
 
-        var drawControl = new L.Control.Draw({
-            position: 'topleft',
-            draw: {
-                polyline: false, 
-                marker: { icon: customMarkerIcon },
-                circle: {
-                    shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
-                },
-                circlemarker: false,
-                polygon: {
-                    allowIntersection: false, showArea: true,
-                    shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
-                },
-                rectangle: {
-                    shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
-                }
-            },
-            edit: { featureGroup: drawnItems, remove: true }
-        });
-        map.addControl(drawControl);
+        function updateToolbarSettings() {
+            var show = document.getElementById('showToolbar').checked;
+            var pos = document.getElementById('toolbarPos').value;
 
+            // Remove existing control if it exists
+            if (drawControl) {
+                map.removeControl(drawControl);
+                drawControl = null;
+            }
+
+            if (show) {
+                drawControl = new L.Control.Draw({
+                    position: pos,
+                    draw: {
+                        polyline: false, 
+                        marker: { icon: customMarkerIcon },
+                        circle: {
+                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                        },
+                        circlemarker: false,
+                        polygon: {
+                            allowIntersection: false, showArea: true,
+                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                        },
+                        rectangle: {
+                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                        }
+                    },
+                    edit: { featureGroup: drawnItems, remove: true }
+                });
+                map.addControl(drawControl);
+            }
+        }
+        
+        // Initialize Toolbar
+        updateToolbarSettings();
 
         // 4. State Management
         var currentLayer = null;
