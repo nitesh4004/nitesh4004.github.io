@@ -431,15 +431,17 @@
                 <i class="fa-solid fa-chevron-down text-xs"></i>
             </div>
             <div id="navContent" class="section-content">
+                <!-- Changed Placeholder and Icon logic in scripts -->
                 <div class="flex gap-2 mb-3">
-                    <button id="locateBtn" class="action-btn btn-primary" style="margin-top:0; flex: 1;">
-                        <i class="fa-solid fa-location-crosshairs"></i> GPS
+                    <input type="text" id="searchCoords" placeholder="Search Place (e.g. Delhi, Farm No 4)" class="sidebar-input">
+                    <button id="searchBtn" class="action-btn btn-primary" style="margin-top:0; width: auto; padding: 0 15px;">
+                        <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
                 </div>
+                
                 <div class="flex gap-2">
-                    <input type="text" id="searchCoords" placeholder="Lat, Lng (e.g. 28.6, 77.2)" class="sidebar-input">
-                    <button id="searchBtn" class="action-btn btn-dark" style="margin-top:0; width: auto; padding: 0 15px;">
-                        <i class="fa-solid fa-arrow-right"></i>
+                     <button id="locateBtn" class="action-btn btn-dark" style="margin-top:0; flex: 1;">
+                        <i class="fa-solid fa-location-crosshairs"></i> Use My GPS
                     </button>
                 </div>
             </div>
@@ -928,21 +930,75 @@
             setTimeout(() => { toast.classList.add('opacity-0'); }, 3000);
         }
 
+        // --- UPDATED SEARCH LOGIC (Coordinates + Nominatim Place Search) ---
         document.getElementById('searchBtn').addEventListener('click', function() {
             const inputVal = document.getElementById('searchCoords').value.trim();
-            const parts = inputVal.split(/[\s,]+/);
-            if (parts.length < 2) { showToast("Format: Lat, Lng"); return; }
-            const lat = parseFloat(parts[0]);
-            const lng = parseFloat(parts[1]);
-            
-            if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90) { showToast("Invalid coordinates"); return; }
+            if(!inputVal) return;
 
-            map.flyTo([lat, lng], 16, { duration: 1.5 });
-            L.marker([lat, lng], { icon: customMarkerIcon }).addTo(map)
-                .bindPopup(`<b>Search Result</b><br>${lat}, ${lng}`)
-                .openPopup();
-            showToast("Moved to location");
+            // Check if input looks like "Lat, Lng" (e.g. 28.5, 77.2)
+            const coordRegex = /^-?\d+(\.\d+)?\s*[,\s]\s*-?\d+(\.\d+)?$/;
+            
+            if (coordRegex.test(inputVal)) {
+                // Handle as coordinates
+                const parts = inputVal.split(/[\s,]+/);
+                const lat = parseFloat(parts[0]);
+                const lng = parseFloat(parts[1]);
+                
+                if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90) { showToast("Invalid coordinates"); return; }
+
+                map.flyTo([lat, lng], 16, { duration: 1.5 });
+                createSearchResultMarker(lat, lng, "Search Result");
+                showToast("Moved to coordinates");
+            } else {
+                // Handle as Place Name (Nominatim API)
+                var btn = this;
+                var originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+                btn.disabled = true;
+
+                // Call OpenStreetMap Nominatim API
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(inputVal)}&limit=1`;
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        btn.innerHTML = originalIcon;
+                        btn.disabled = false;
+
+                        if (data && data.length > 0) {
+                            const lat = parseFloat(data[0].lat);
+                            const lon = parseFloat(data[0].lon);
+                            const displayName = data[0].display_name.split(',')[0]; // Shorten name
+
+                            map.flyTo([lat, lon], 16, { duration: 1.5 });
+                            createSearchResultMarker(lat, lon, displayName);
+                            showToast("Found: " + displayName);
+                        } else {
+                            showToast("❌ Location not found");
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        btn.innerHTML = originalIcon;
+                        btn.disabled = false;
+                        showToast("❌ Network error");
+                    });
+            }
         });
+        
+        // Allow pressing Enter in search box
+        document.getElementById('searchCoords').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchBtn').click();
+            }
+        });
+
+        // Helper to place marker on search result
+        function createSearchResultMarker(lat, lng, title) {
+            L.marker([lat, lng], { icon: customMarkerIcon }).addTo(map)
+                .bindPopup(`<b>${title}</b><br>${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                .openPopup();
+        }
 
         // --- GPS Logic ---
         document.getElementById('locateBtn').addEventListener('click', function() {
