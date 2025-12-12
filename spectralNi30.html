@@ -1,374 +1,480 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nitesh Kumar | Geospatial Data Scientist</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nitesh Kumar - Geospatial Data Scientist</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap");
 
-        :root {
-            --neon-cyan: #0891b2;
-            --neon-green: #059669;
-            --light-bg: #f8fafc;
-        }
+      :root {
+        --neon-cyan: #0891b2;
+        --neon-green: #059669;
+        --light-bg: #f8fafc;
+      }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--light-bg);
-            color: #1e293b;
-            overflow-x: hidden;
-        }
+      body {
+        font-family: Inter, sans-serif;
+        background-color: var(--light-bg);
+        color: #1e293b;
+        overflow-x: hidden;
+      }
 
-        .font-mono {
-            font-family: 'JetBrains Mono', monospace;
-        }
+      .font-mono {
+        font-family: JetBrains Mono, monospace;
+      }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
 
-        /* Glassmorphism */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            transition: all 0.3s ease;
-        }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
 
-        /* Grid Background */
-        .bg-grid {
-            background-size: 40px 40px;
-            background-image: linear-gradient(to right, rgba(148, 163, 184, 0.1) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
-        }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
 
-        /* Animations */
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 15px rgba(8, 145, 178, 0.1); }
-            50% { box-shadow: 0 0 25px rgba(8, 145, 178, 0.3); }
-        }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
 
-        .btn-glow:hover {
-            animation: pulse-glow 2s infinite;
-        }
+      /* Glassmorphism */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
+          0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s ease;
+      }
 
-        #bg-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -10;
-            opacity: 1;
-            pointer-events: none;
+      /* Grid Background */
+      .bg-grid {
+        background-size: 40px 40px;
+        background-image: linear-gradient(
+            to right,
+            rgba(148, 163, 184, 0.1) 1px,
+            transparent 1px
+          ),
+          linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+      }
+
+      /* Animations */
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          box-shadow: 0 0 15px rgba(8, 145, 178, 0.1);
         }
+        50% {
+          box-shadow: 0 0 25px rgba(8, 145, 178, 0.3);
+        }
+      }
+
+      .btn-glow:hover {
+        animation: pulse-glow 2s infinite;
+      }
+
+      #bg-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -10;
+        opacity: 1;
+        pointer-events: none;
+      }
     </style>
-</head>
-<body class="antialiased selection:bg-cyan-200 selection:text-cyan-900">
+  </head>
 
+  <body class="antialiased selection:bg-cyan-200 selection:text-cyan-900">
     <div id="bg-canvas"></div>
 
     <nav class="fixed w-full z-50 glass-panel border-b border-slate-200/50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20">
-                <div class="flex items-center gap-2">
-                    <div class="h-10 w-10 bg-gradient-to-br from-cyan-600 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">NK</div>
-                    <span class="font-bold text-xl tracking-tight text-slate-800">
-                        Nitesh Kumar
-                    </span>
-                </div>
-                
-                <div class="hidden lg:block">
-                    <div class="ml-10 flex items-baseline space-x-6">
-                        <a href="#home" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">Home</a>
-                        <a href="#about" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">About</a>
-                        <a href="#products" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">Projects</a>
-                        <a href="#resume" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">Experience</a>
-                        <a href="#certifications" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">Certifications</a>
-                        <a href="#publications" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">Research</a>
-                        <a href="#contact" class="bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 px-4 py-2 rounded-full text-sm font-medium transition-all btn-glow">
-                            Connect
-                        </a>
-                    </div>
-                </div>
-
-                <div class="lg:hidden">
-                    <button id="mobile-menu-btn" class="text-slate-600 hover:text-slate-900 p-2">
-                        <i data-lucide="menu" class="h-6 w-6"></i>
-                    </button>
-                </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-20">
+          <div class="flex items-center gap-2">
+            <div class="h-10 w-10 bg-gradient-to-br from-cyan-600 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+              NK
             </div>
-        </div>
+            <span class="font-bold text-xl tracking-tight text-slate-800">Nitesh Kumar</span>
+          </div>
 
-        <div id="mobile-menu" class="hidden lg:hidden bg-white border-b border-slate-200">
-            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <a href="#home" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">Home</a>
-                <a href="#about" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">About</a>
-                <a href="#products" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">Projects</a>
-                <a href="#resume" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">Experience</a>
-                <a href="#certifications" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">Certifications</a>
-                <a href="#publications" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">Publications</a>
-                <a href="#contact" class="text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">Connect</a>
+          <div class="hidden lg:block">
+            <div class="ml-10 flex items-baseline space-x-6">
+              <a href="#home" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                Home
+              </a>
+              <a href="#about" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                About
+              </a>
+              <a href="#products" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                Projects
+              </a>
+              <a href="#resume" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                Experience
+              </a>
+              <a href="#certifications" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                Certifications
+              </a>
+              <a href="#publications" class="text-slate-600 hover:text-cyan-600 transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                Research
+              </a>
+              <a href="#contact" class="bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 px-4 py-2 rounded-full text-sm font-medium transition-all btn-glow">
+                Connect
+              </a>
             </div>
+          </div>
+
+          <div class="lg:hidden">
+            <button id="mobile-menu-btn" class="text-slate-600 hover:text-slate-900 p-2">
+              <i data-lucide="menu" class="h-6 w-6"></i>
+            </button>
+          </div>
         </div>
+      </div>
+
+      <div id="mobile-menu" class="hidden lg:hidden bg-white border-b border-slate-200">
+        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+          <a href="#home" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">
+            Home
+          </a>
+          <a href="#about" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">
+            About
+          </a>
+          <a href="#products" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">
+            Projects
+          </a>
+          <a href="#resume" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">
+            Experience
+          </a>
+          <a href="#certifications" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">
+            Certifications
+          </a>
+          <a href="#publications" class="text-slate-600 hover:text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">
+            Publications
+          </a>
+          <a href="#contact" class="text-cyan-600 block px-3 py-2 rounded-md text-base font-medium">
+            Connect
+          </a>
+        </div>
+      </div>
     </nav>
 
     <section id="home" class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel border border-cyan-200/50 text-cyan-700 text-sm font-mono mb-8 animate-fade-in-up shadow-sm">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-600"></span>
-                </span>
-                Nitesh Kumar | Geospatial Data Scientist
-            </div>
-            
-            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-6">
-                Decoding the World with <br/>
-                <span class="bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 via-emerald-600 to-cyan-600">Spatial Data Science</span>
-            </h1>
-            
-            <p class="mt-4 max-w-2xl mx-auto text-xl text-slate-600">
-                I transform satellite imagery into actionable insights using machine learning, remote sensing, and advanced GIS techniques.
-            </p>
-
-            <div class="mt-10 flex justify-center gap-4">
-                <a href="#products" class="group relative px-8 py-3 bg-cyan-600 text-white font-semibold rounded-lg overflow-hidden transition-all hover:scale-105 shadow-lg shadow-cyan-600/25">
-                    <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1s_infinite]"></div>
-                    View Projects
-                </a>
-                <a href="#contact" class="px-8 py-3 bg-white text-slate-700 font-semibold rounded-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
-                    Get In Touch <i data-lucide="arrow-right" class="h-4 w-4"></i>
-                </a>
-            </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel border border-cyan-200/50 text-cyan-700 text-sm font-mono mb-8 animate-fade-in-up shadow-sm">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-600"></span>
+          </span>
+          Nitesh Kumar - Geospatial Data Scientist
         </div>
+
+        <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-6">
+          Decoding the World with <br />
+          <span class="bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 via-emerald-600 to-cyan-600">
+            Spatial Data Science
+          </span>
+        </h1>
+
+        <p class="mt-4 max-w-2xl mx-auto text-xl text-slate-600">
+          I transform satellite imagery into actionable insights using machine
+          learning, remote sensing, and advanced GIS techniques.
+        </p>
+
+        <div class="mt-10 flex justify-center gap-4">
+          <a href="#products" class="group relative px-8 py-3 bg-cyan-600 text-white font-semibold rounded-lg overflow-hidden transition-all hover:scale-105 shadow-lg shadow-cyan-600/25">
+            <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer-1s-infinite"></div>
+            View Projects
+          </a>
+          <a href="#contact" class="px-8 py-3 bg-white text-slate-700 font-semibold rounded-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
+            Get In Touch
+            <i data-lucide="arrow-right" class="h-4 w-4"></i>
+          </a>
+        </div>
+      </div>
     </section>
 
     <section id="about" class="py-20 bg-white/50 border-y border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="max-w-4xl mx-auto">
-                <h2 class="text-3xl font-bold text-slate-900 mb-6">About Me</h2>
-                <div class="glass-panel p-8 rounded-2xl">
-                    <p class="text-slate-600 mb-6 leading-relaxed text-lg">
-                        I'm a Geospatial Data Scientist with 2+ years of experience in remote sensing and satellite imagery analysis. My expertise spans from Sentinel-1/2 SAR and optical data processing to advanced machine learning applications in agriculture and disaster management.
-                    </p>
-                    <p class="text-slate-600 mb-6 leading-relaxed text-lg">
-                        Currently at SWANSAT, I develop cutting-edge solutions for crop monitoring, flood mapping, and environmental change detection. I'm passionate about democratizing geospatial data through innovative web applications and scalable ML models.
-                    </p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                        <div class="flex flex-col items-center p-4 bg-cyan-50/50 rounded-xl">
-                            <span class="text-3xl font-bold text-cyan-600">2+</span>
-                            <span class="text-sm text-slate-600 font-medium">Years Experience</span>
-                        </div>
-                        <div class="flex flex-col items-center p-4 bg-emerald-50/50 rounded-xl">
-                            <span class="text-3xl font-bold text-emerald-600">50+</span>
-                            <span class="text-sm text-slate-600 font-medium">Projects Delivered</span>
-                        </div>
-                        <div class="flex flex-col items-center p-4 bg-purple-50/50 rounded-xl">
-                            <span class="text-3xl font-bold text-purple-600">100%</span>
-                            <span class="text-sm text-slate-600 font-medium">Dedication</span>
-                        </div>
-                    </div>
-                </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="text-3xl font-bold text-slate-900 mb-6">About Me</h2>
+
+          <div class="glass-panel p-8 rounded-2xl">
+            <p class="text-slate-600 mb-6 leading-relaxed text-lg">
+              I'm a Geospatial Data Scientist with 2 years of experience in remote
+              sensing and satellite imagery analysis. My expertise spans from
+              Sentinel-1/2 SAR and optical data processing to advanced machine learning
+              applications in agriculture and disaster management.
+            </p>
+
+            <p class="text-slate-600 mb-6 leading-relaxed text-lg">
+              Currently at SWANSAT, I develop cutting-edge solutions for crop monitoring,
+              flood mapping, and environmental change detection. I'm passionate about
+              democratizing geospatial data through innovative web applications and
+              scalable ML models.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+              <div class="flex flex-col items-center p-4 bg-cyan-50/50 rounded-xl">
+                <span class="text-3xl font-bold text-cyan-600">2+</span>
+                <span class="text-sm text-slate-600 font-medium">Years Experience</span>
+              </div>
+              <div class="flex flex-col items-center p-4 bg-emerald-50/50 rounded-xl">
+                <span class="text-3xl font-bold text-emerald-600">50+</span>
+                <span class="text-sm text-slate-600 font-medium">Projects Delivered</span>
+              </div>
+              <div class="flex flex-col items-center p-4 bg-purple-50/50 rounded-xl">
+                <span class="text-3xl font-bold text-purple-600">100%</span>
+                <span class="text-sm text-slate-600 font-medium">Dedication</span>
+              </div>
             </div>
+          </div>
         </div>
+      </div>
     </section>
 
     <section id="products" class="py-20 bg-grid relative">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl font-bold text-slate-900 mb-4">Our Suite of Tools
-</h2>
-                <p class="text-slate-600 max-w-2xl mx-auto">Powerful, web-based solutions for geospatial professionals.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                
-                <div class="group glass-panel rounded-2xl p-8 hover:bg-white transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-cyan-500 shadow-sm hover:shadow-xl flex flex-col justify-between">
-                    <div>
-                        <div class="h-12 w-12 bg-cyan-50 rounded-lg flex items-center justify-center text-cyan-600 mb-6 group-hover:scale-110 transition-transform">
-                            <i data-lucide="globe" class="h-6 w-6"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-slate-900 mb-3">SpecTralNi30</h3>
-                        <p class="text-slate-600 text-sm mb-6">
-                            Full-stack geospatial web application for real-time VHI monitoring and soil moisture retrieval using Google Earth Engine API.
-                        </p>
-                        <div class="flex flex-wrap gap-2 mb-6">
-                            <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">Python</span>
-                            <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">Streamlit</span>
-                            <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">GEE</span>
-                        </div>
-                    </div>
-                    <a href="https://spectralni30.streamlit.app" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-800 hover:bg-cyan-600 text-white rounded-lg transition-colors font-medium">
-                        Live Demo <i data-lucide="external-link" class="h-4 w-4"></i>
-                    </a>
-                </div>
-
-                <div class="group glass-panel rounded-2xl p-8 hover:bg-white transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-emerald-500 shadow-sm hover:shadow-xl flex flex-col justify-between">
-                    <div>
-                        <div class="h-12 w-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 mb-6 group-hover:scale-110 transition-transform">
-                            <i data-lucide="file-code" class="h-6 w-6"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-slate-900 mb-3">geoFormatX</h3>
-                        <p class="text-slate-600 text-sm mb-6">
-                            Serverless geospatial ETL for seamless vector format conversion and CRS reprojection automation.
-                        </p>
-                        <div class="flex flex-wrap gap-2 mb-6">
-                            <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">Geopandas</span>
-                            <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">Rasterio</span>
-                        </div>
-                    </div>
-                    <a href="https://geoformatx.streamlit.app" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-800 hover:bg-emerald-600 text-white rounded-lg transition-colors font-medium">
-                        Live Demo <i data-lucide="external-link" class="h-4 w-4"></i>
-                    </a>
-                </div>
-
-                 <div class="group glass-panel rounded-2xl p-8 hover:bg-white transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-purple-500 shadow-sm hover:shadow-xl flex flex-col justify-between">
-                    <div>
-                        <div class="h-12 w-12 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 mb-6 group-hover:scale-110 transition-transform">
-                            <i data-lucide="map" class="h-6 w-6"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-slate-900 mb-3">KaMaL</h3>
-                        <p class="text-slate-600 text-sm mb-6">
-                            Interactive geospatial web module using pure WebGIS, HTML, and JavaScript to visualize custom datasets and layers seamlessly.
-                        </p>
-                        <div class="flex flex-wrap gap-2 mb-6">
-                            <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">WebGIS</span>
-                            <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">JavaScript</span>
-                        </div>
-                    </div>
-                    <a href="https://nitesh4004.github.io/kamal.html" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-800 hover:bg-purple-600 text-white rounded-lg transition-colors font-medium">
-                        Live Demo <i data-lucide="external-link" class="h-4 w-4"></i>
-                    </a>
-                </div>
-
-            </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+          <h2 class="text-3xl font-bold text-slate-900 mb-4">Our Suite of Tools</h2>
+          <p class="text-slate-600 max-w-2xl mx-auto">
+            Powerful, web-based solutions for geospatial professionals.
+          </p>
         </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          
+          <div class="group glass-panel rounded-2xl p-8 hover:bg-white transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-cyan-500 shadow-sm hover:shadow-xl flex flex-col justify-between">
+            <div>
+              <div class="h-12 w-12 bg-cyan-50 rounded-lg flex items-center justify-center text-cyan-600 mb-6 group-hover:scale-110 transition-transform">
+                <i data-lucide="globe" class="h-6 w-6"></i>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 mb-3">SpecTralNi30</h3>
+              <p class="text-slate-600 text-sm mb-6">
+                Full-stack geospatial web application for real-time VHI monitoring and
+                soil moisture retrieval using Google Earth Engine API.
+              </p>
+              <div class="flex flex-wrap gap-2 mb-6">
+                <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">Python</span>
+                <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">Streamlit</span>
+                <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">GEE</span>
+              </div>
+            </div>
+            <a href="https://spectralni30.streamlit.app" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-800 hover:bg-cyan-600 text-white rounded-lg transition-colors font-medium">
+              Live Demo <i data-lucide="external-link" class="h-4 w-4"></i>
+            </a>
+          </div>
+
+          <div class="group glass-panel rounded-2xl p-8 hover:bg-white transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-emerald-500 shadow-sm hover:shadow-xl flex flex-col justify-between">
+            <div>
+              <div class="h-12 w-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 mb-6 group-hover:scale-110 transition-transform">
+                <i data-lucide="file-code" class="h-6 w-6"></i>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 mb-3">geoFormatX</h3>
+              <p class="text-slate-600 text-sm mb-6">
+                Serverless geospatial ETL for seamless vector format conversion and CRS reprojection automation.
+              </p>
+              <div class="flex flex-wrap gap-2 mb-6">
+                <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">Geopandas</span>
+                <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">Rasterio</span>
+              </div>
+            </div>
+            <a href="https://geoformatx.streamlit.app" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-800 hover:bg-emerald-600 text-white rounded-lg transition-colors font-medium">
+              Live Demo <i data-lucide="external-link" class="h-4 w-4"></i>
+            </a>
+          </div>
+
+          <div class="group glass-panel rounded-2xl p-8 hover:bg-white transition-all duration-300 hover:-translate-y-2 border-t-4 border-t-purple-500 shadow-sm hover:shadow-xl flex flex-col justify-between">
+            <div>
+              <div class="h-12 w-12 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 mb-6 group-hover:scale-110 transition-transform">
+                <i data-lucide="map" class="h-6 w-6"></i>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 mb-3">KaMaL</h3>
+              <p class="text-slate-600 text-sm mb-6">
+                Interactive geospatial web module using pure WebGIS, HTML, and JavaScript to visualize custom datasets and layers seamlessly.
+              </p>
+              <div class="flex flex-wrap gap-2 mb-6">
+                <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">WebGIS</span>
+                <span class="px-2 py-1 bg-slate-100 text-xs text-slate-600 rounded">JavaScript</span>
+              </div>
+            </div>
+            <a href="https://nitesh4004.github.io/kamal.html" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-800 hover:bg-purple-600 text-white rounded-lg transition-colors font-medium">
+              Live Demo <i data-lucide="external-link" class="h-4 w-4"></i>
+            </a>
+          </div>
+
+        </div>
+      </div>
     </section>
 
     <section id="resume" class="py-20 bg-white/50 border-t border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl font-bold text-slate-900 mb-12 text-center">Professional Journey</h2>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <div>
-                    <h3 class="text-xl font-bold text-cyan-700 mb-6 flex items-center gap-2">
-                        <i data-lucide="briefcase"></i> Experience
-                    </h3>
-                    <div class="space-y-8 border-l-2 border-slate-200 ml-3 pl-8 relative">
-                        <div class="relative">
-                            <span class="absolute -left-[41px] top-1 h-5 w-5 rounded-full border-4 border-white bg-cyan-500"></span>
-                            <h4 class="text-lg font-bold text-slate-900">GIS Analyst</h4>
-                            <p class="text-cyan-600 font-medium text-sm">SWANSAT (OPC) Pvt Ltd. | June 2024 - Present</p>
-                            <p class="text-slate-600 mt-2 text-sm leading-relaxed">
-                                Developing methodologies for environmental change detection and crop monitoring. Using SAR, Optical, and Thermal data for landslide monitoring and risk assessment.
-                            </p>
-                        </div>
-                        <div class="relative">
-                            <span class="absolute -left-[41px] top-1 h-5 w-5 rounded-full border-4 border-white bg-slate-400"></span>
-                            <h4 class="text-lg font-bold text-slate-900">Teaching Assistant</h4>
-                            <p class="text-slate-500 font-medium text-sm">IIT Guwahati | Jan 2023 - May 2024</p>
-                            <p class="text-slate-600 mt-2 text-sm leading-relaxed">
-                                Conducted practical labs on spatial analysis and GIS tools, grading assignments, and resolving student queries on geospatial algorithms.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-xl font-bold text-emerald-700 mb-6 flex items-center gap-2">
-                        <i data-lucide="graduation-cap"></i> Education
-                    </h3>
-                    <div class="space-y-8 border-l-2 border-slate-200 ml-3 pl-8 relative">
-                        <div class="relative">
-                            <span class="absolute -left-[41px] top-1 h-5 w-5 rounded-full border-4 border-white bg-emerald-500"></span>
-                            <h4 class="text-lg font-bold text-slate-900">M.Tech in Earth System Science and Engineering</h4>
-                            <p class="text-emerald-600 font-medium text-sm">Indian Institute Of Technology Guwahati | 2022 - 2024</p>
-                            <p class="text-slate-600 mt-1 text-sm">CGPA: 8.9/10</p>
-                        </div>
-                        <div class="relative">
-                            <span class="absolute -left-[41px] top-1 h-5 w-5 rounded-full border-4 border-white bg-slate-400"></span>
-                            <h4 class="text-lg font-bold text-slate-900">B.Tech in Civil Engineering</h4>
-                            <p class="text-slate-500 font-medium text-sm">Rajkiya Engineering College | 2018 - 2022</p>
-                            <p class="text-slate-600 mt-1 text-sm">CGPA: 7.93/10</p>
-                        </div>
-                    </div>
-                </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-bold text-slate-900 mb-12 text-center">Professional Journey</h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div>
+            <h3 class="text-xl font-bold text-cyan-700 mb-6 flex items-center gap-2">
+              <i data-lucide="briefcase"></i> Experience
+            </h3>
+            <div class="space-y-8 border-l-2 border-slate-200 ml-3 pl-8 relative">
+              <div class="relative">
+                <span class="absolute -left-[41px] top-1 h-5 w-5 rounded-full border-4 border-white bg-cyan-500"></span>
+                <h4 class="text-lg font-bold text-slate-900">GIS Analyst</h4>
+                <p class="text-cyan-600 font-medium text-sm">SWANSAT (OPC) Pvt Ltd. | June 2024 - Present</p>
+                <p class="text-slate-600 mt-2 text-sm leading-relaxed">
+                  Developing methodologies for environmental change detection and crop monitoring. Using SAR, Optical, and Thermal data for landslide monitoring and risk assessment.
+                </p>
+              </div>
+              <div class="relative">
+                <span class="absolute -left-[41px] top-1 h-5 w-5 rounded-full border-4 border-white bg-slate-400"></span>
+                <h4 class="text-lg font-bold text-slate-900">Teaching Assistant</h4>
+                <p class="text-slate-500 font-medium text-sm">IIT Guwahati | Jan 2023 - May 2024</p>
+                <p class="text-slate-600 mt-2 text-sm leading-relaxed">
+                  Conducted practical labs on spatial analysis and GIS tools, grading assignments, and resolving student queries on geospatial algorithms.
+                </p>
+              </div>
             </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-bold text-emerald-700 mb-6 flex items-center gap-2">
+              <i data-lucide="graduation-cap"></i> Education
+            </h3>
+            <div class="space-y-8 border-l-2 border-slate-200 ml-3 pl-8 relative">
+              <div class="relative">
+                <span class="absolute -left-[41px] top-1 h-5 w-5 rounded-full border-4 border-white bg-emerald-500"></span>
+                <h4 class="text-lg font-bold text-slate-900">M.Tech in Earth System Science and Engineering</h4>
+                <p class="text-emerald-600 font-medium text-sm">Indian Institute Of Technology Guwahati | 2022 - 2024</p>
+                <p class="text-slate-600 mt-1 text-sm">CGPA: 8.9/10</p>
+              </div>
+              <div class="relative">
+                <span class="absolute -left-[41px] top-1 h-5 w-5 rounded-full border-4 border-white bg-slate-400"></span>
+                <h4 class="text-lg font-bold text-slate-900">B.Tech in Civil Engineering</h4>
+                <p class="text-slate-500 font-medium text-sm">Rajkiya Engineering College | 2018 - 2022</p>
+                <p class="text-slate-600 mt-1 text-sm">CGPA: 7.93/10</p>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </section>
 
     <section class="py-20 bg-grid border-t border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h3 class="text-2xl font-bold text-slate-900 mb-10 text-center">Technical Arsenal</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
-                <div class="glass-panel p-6 rounded-xl">
-                    <h4 class="text-cyan-700 font-bold mb-4 flex items-center gap-2"><i data-lucide="satellite" class="w-5 h-5"></i> Remote Sensing</h4>
-                    <ul class="space-y-2 text-sm text-slate-600">
-                        <li>Sentinel-1/2 Processing</li>
-                        <li>SAR Analysis</li>
-                        <li>NDVI/EVI/NDWI Indices</li>
-                        <li>Hyperspectral Data</li>
-                    </ul>
-                </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h3 class="text-2xl font-bold text-slate-900 mb-10 text-center">Technical Arsenal</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          <div class="glass-panel p-6 rounded-xl">
+            <h4 class="text-cyan-700 font-bold mb-4 flex items-center gap-2"><i data-lucide="satellite" class="w-5 h-5"></i> Remote Sensing</h4>
+            <ul class="space-y-2 text-sm text-slate-600">
+              <li>Sentinel-1/2 Processing</li>
+              <li>SAR Analysis</li>
+              <li>NDVI/EVI/NDWI Indices</li>
+              <li>Hyperspectral Data</li>
+            </ul>
+          </div>
 
-                <div class="glass-panel p-6 rounded-xl">
-                    <h4 class="text-emerald-700 font-bold mb-4 flex items-center gap-2"><i data-lucide="code" class="w-5 h-5"></i> Programming</h4>
-                    <ul class="space-y-2 text-sm text-slate-600">
-                        <li>Python</li>
-                        <li>JavaScript (GEE)</li>
-                        <li>SQL</li>
-                        <li>GDAL/OGR</li>
-                    </ul>
-                </div>
+          <div class="glass-panel p-6 rounded-xl">
+            <h4 class="text-emerald-700 font-bold mb-4 flex items-center gap-2"><i data-lucide="code" class="w-5 h-5"></i> Programming</h4>
+            <ul class="space-y-2 text-sm text-slate-600">
+              <li>Python</li>
+              <li>JavaScript (GEE)</li>
+              <li>SQL</li>
+              <li>GDAL/OGR</li>
+            </ul>
+          </div>
 
-                <div class="glass-panel p-6 rounded-xl">
-                    <h4 class="text-purple-700 font-bold mb-4 flex items-center gap-2"><i data-lucide="brain" class="w-5 h-5"></i> ML & AI</h4>
-                    <ul class="space-y-2 text-sm text-slate-600">
-                        <li>Random Forest</li>
-                        <li>XGBoost</li>
-                        <li>Time-Series Analysis</li>
-                        <li>Deep Learning</li>
-                    </ul>
-                </div>
+          <div class="glass-panel p-6 rounded-xl">
+            <h4 class="text-purple-700 font-bold mb-4 flex items-center gap-2"><i data-lucide="brain" class="w-5 h-5"></i> ML & AI</h4>
+            <ul class="space-y-2 text-sm text-slate-600">
+              <li>Random Forest</li>
+              <li>XGBoost</li>
+              <li>Time-Series Analysis</li>
+              <li>Deep Learning</li>
+            </ul>
+          </div>
 
-                <div class="glass-panel p-6 rounded-xl">
-                    <h4 class="text-orange-700 font-bold mb-4 flex items-center gap-2"><i data-lucide="map" class="w-5 h-5"></i> GIS Tools</h4>
-                    <ul class="space-y-2 text-sm text-slate-600">
-                        <li>QGIS / ArcGIS Pro</li>
-                        <li>Google Earth Engine</li>
-                        <li>SNAP Toolbox</li>
-                        <li>Streamlit</li>
-                    </ul>
-                </div>
+          <div class="glass-panel p-6 rounded-xl">
+            <h4 class="text-orange-700 font-bold mb-4 flex items-center gap-2"><i data-lucide="map" class="w-5 h-5"></i> GIS Tools</h4>
+            <ul class="space-y-2 text-sm text-slate-600">
+              <li>QGIS / ArcGIS Pro</li>
+              <li>Google Earth Engine</li>
+              <li>SNAP Toolbox</li>
+              <li>Streamlit</li>
+            </ul>
+          </div>
 
-            </div>
         </div>
+      </div>
     </section>
 
     <section id="certifications" class="py-20 bg-white/50 border-t border-slate-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-3xl font-bold text-slate-900 mb-12 text-center">Licenses & Certifications</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                
+                <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <i data-lucide="award" class="text-cyan-600 h-6 w-6"></i>
+                            <span class="text-xs font-mono text-slate-400">2025</span>
+                        </div>
+                        <h3 class="font-bold text-slate-900 mb-1 leading-tight">Deep Learning with PyTorch</h3>
+                        <p class="text-sm text-slate-500 mb-3">IBM</p>
+                        <p class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2">Skills: Deep Learning, PyTorch</p>
+                    </div>
+                    <a href="https://www.coursera.org/verify/GQH47KVMYHDQ" target="_blank" class="text-xs text-cyan-600 font-medium hover:underline flex items-center gap-1 mt-3">Verify <i data-lucide="external-link" class="h-3 w-3"></i></a>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <i data-lucide="award" class="text-cyan-600 h-6 w-6"></i>
+                            <span class="text-xs font-mono text-slate-400">2025</span>
+                        </div>
+                        <h3 class="font-bold text-slate-900 mb-1 leading-tight">Deep Learning with PyTorch : Image Segmentation</h3>
+                        <p class="text-sm text-slate-500 mb-3">Coursera</p>
+                        <p class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2">Skills: Image Segmentation</p>
+                    </div>
+                    <a href="https://www.coursera.org/verify/IMP15FQ3AKZ3" target="_blank" class="text-xs text-cyan-600 font-medium hover:underline flex items-center gap-1 mt-3">Verify <i data-lucide="external-link" class="h-3 w-3"></i></a>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <i data-lucide="award" class="text-cyan-600 h-6 w-6"></i>
+                            <span class="text-xs font-mono text-slate-400">2025</span>
+                        </div>
+                        <h3 class="font-bold text-slate-900 mb-1 leading-tight">Intro to Deep Learning & Neural Networks with Keras</h3>
+                        <p class="text-sm text-slate-500 mb-3">IBM</p>
+                        <p class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2">Skills: Keras, Neural Networks</p>
+                    </div>
+                    <a href="https://www.coursera.org/verify/6WQIWKS1K243" target="_blank" class="text-xs text-cyan-600 font-medium hover:underline flex items-center gap-1 mt-3">Verify <i data-lucide="external-link" class="h-3 w-3"></i></a>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <i data-lucide="award" class="text-cyan-600 h-6 w-6"></i>
+                            <span class="text-xs font-mono text-slate-400">2025</span>
+                        </div>
+                        <h3 class="font-bold text-slate-900 mb-1 leading-tight">Spatial Data Science and Applications</h3>
+                        <p class="text-sm text-slate-500 mb-3">Yonsei University</p>
+                        <p class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2">Skills: Spatial Data Science</p>
+                    </div>
+                    <a href="https://www.coursera.org/verify/ZZSBQU6URGCD" target="_blank" class="text-xs text-cyan-600 font-medium hover:underline flex items-center gap-1 mt-3">Verify <i data-lucide="external-link" class="h-3 w-3"></i></a>
+                </div>
                 
                 <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
                     <div>
@@ -422,7 +528,7 @@
                     <a href="https://www.coursera.org/account/accomplishments/records/WK3DBYUZDZG8" target="_blank" class="text-xs text-cyan-600 font-medium hover:underline flex items-center gap-1 mt-3">Verify <i data-lucide="external-link" class="h-3 w-3"></i></a>
                 </div>
 
-                 <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
+                <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
                     <div>
                         <div class="flex justify-between items-start mb-3">
                             <i data-lucide="award" class="text-cyan-600 h-6 w-6"></i>
@@ -435,7 +541,7 @@
                     <a href="https://www.coursera.org/account/accomplishments/records/7PBGFQUHPA6G" target="_blank" class="text-xs text-cyan-600 font-medium hover:underline flex items-center gap-1 mt-3">Verify <i data-lucide="external-link" class="h-3 w-3"></i></a>
                 </div>
 
-                 <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
+                <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
                     <div>
                         <div class="flex justify-between items-start mb-3">
                             <i data-lucide="award" class="text-cyan-600 h-6 w-6"></i>
@@ -487,7 +593,7 @@
                     <a href="https://www.coursera.org/account/accomplishments/records/V45GVQ9AP7TU" target="_blank" class="text-xs text-cyan-600 font-medium hover:underline flex items-center gap-1 mt-3">Verify <i data-lucide="external-link" class="h-3 w-3"></i></a>
                 </div>
 
-                 <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
+                <div class="glass-panel p-6 rounded-xl hover:-translate-y-1 transition-transform flex flex-col justify-between">
                     <div>
                         <div class="flex justify-between items-start mb-3">
                             <i data-lucide="award" class="text-cyan-600 h-6 w-6"></i>
@@ -728,5 +834,5 @@
         window.addEventListener('resize', onWindowResize, false);
         init();
     </script>
-</body>
-</html>
+  </body>
+                                                  </html>
