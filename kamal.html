@@ -1,754 +1,1313 @@
-import streamlit as st
-import ee
-import json
-import geemap.foliumap as geemap
-import xml.etree.ElementTree as ET
-import re
-import requests
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.colors as mcolors
-import numpy as np
-from io import BytesIO
-from PIL import Image
-from datetime import datetime, timedelta
-import pandas as pd
-import folium 
-import geopandas as gpd
-import zipfile
-import os
-import tempfile
-import gdown
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaMaL - KML Boundary Maker (Compact UI)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
 
-# --- 1. PAGE CONFIG ---
-st.set_page_config(
-    page_title="GeoSarovar - Water Intelligence", 
-    page_icon="💧", 
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-# --- 2. CSS STYLING ---
-st.markdown("""
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <script src="https://unpkg.com/@mapbox/togeojson/togeojson.js"></script>
+
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;600&display=swap');
-    
-    :root {
-        --bg-color: #ffffff;
-        --accent-primary: #00204a;   
-        --accent-secondary: #005792; 
-        --text-primary: #00204a;       
-    }
+        /* Modern Reset & Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    .stApp { 
-        background-color: var(--bg-color);
-        font-family: 'Inter', sans-serif;
-        color: var(--text-primary);
-    }
-
-    h1, h2, h3, .title-font { 
-        font-family: 'Rajdhani', sans-serif !important; 
-        color: var(--accent-primary) !important; 
-    }
-    
-    /* Sidebar Styling */
-    section[data-testid="stSidebar"] {
-        background-color: #f8f9fa; 
-        border-right: 1px solid #d1d9e6;
-    }
-    
-    /* Primary Buttons */
-    div.stButton > button:first-child {
-        background: var(--accent-primary);
-        border: none;
-        color: white !important; 
-        font-family: 'Rajdhani', sans-serif;
-        font-weight: 700;
-        letter-spacing: 1px;
-        padding: 0.6rem;
-        border-radius: 6px;
-        width: 100%;
-        transition: all 0.3s ease;
-    }
-    div.stButton > button:first-child:hover {
-        background: var(--accent-secondary);
-        transform: translateY(-2px);
-    }
-
-    /* HUD Header */
-    .hud-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #ffffff;
-        border-bottom: 2px solid var(--accent-primary);
-        padding: 15px 25px;
-        border-radius: 0 0 10px 10px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-    .hud-title {
-        font-family: 'Rajdhani', sans-serif;
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: var(--accent-primary);
-    }
-    
-    /* Cards */
-    .glass-card {
-        background: #ffffff;
-        border: 1px solid #e0e0e0;
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    }
-    .card-label {
-        font-family: 'Rajdhani', sans-serif;
-        color: var(--accent-primary);
-        font-size: 1.1rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        border-bottom: 2px solid #f0f0f0;
-        padding-bottom: 8px;
-        margin-bottom: 12px;
-    }
-    .alert-card {
-        background: #fff5f5;
-        border: 1px solid #fc8181;
-        padding: 15px;
-        border-radius: 12px;
-        margin-bottom: 15px;
-    }
-    .date-badge {
-        background-color: #eef2f6;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #00204a;
-        margin-top: 5px;
-        display: inline-block;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 3. AUTHENTICATION ---
-try:
-    # Try getting secrets from Streamlit secrets
-    if "gcp_service_account" in st.secrets:
-        service_account = st.secrets["gcp_service_account"]["client_email"]
-        secret_dict = dict(st.secrets["gcp_service_account"])
-        key_data = json.dumps(secret_dict) 
-        credentials = ee.ServiceAccountCredentials(service_account, key_data=key_data)
-        ee.Initialize(credentials)
-    else:
-        # Fallback to standard flow (useful for local dev with gcloud installed)
-        ee.Initialize()
-except Exception as e:
-    st.error(f"⚠️ Authentication Error: {e}")
-    st.stop()
-
-# --- STATE MANAGEMENT ---
-if 'calculated' not in st.session_state: st.session_state['calculated'] = False
-if 'roi' not in st.session_state: st.session_state['roi'] = None
-if 'mode' not in st.session_state: st.session_state['mode'] = "📍 RWH Site Suitability"
-
-# --- 4. HELPER FUNCTIONS ---
-
-def parse_kml(content):
-    try:
-        if isinstance(content, bytes): content = content.decode('utf-8')
-        match = re.search(r'<coordinates>(.*?)</coordinates>', content, re.DOTALL | re.IGNORECASE)
-        if match: return process_coords(match.group(1))
-        root = ET.fromstring(content)
-        for elem in root.iter():
-            if elem.tag.lower().endswith('coordinates') and elem.text:
-                return process_coords(elem.text)
-    except: pass
-    return None
-
-def process_coords(text):
-    raw = text.strip().split()
-    coords = [[float(x.split(',')[0]), float(x.split(',')[1])] for x in raw if len(x.split(',')) >= 2]
-    return ee.Geometry.Polygon([coords]) if len(coords) > 2 else None
-
-@st.cache_data(show_spinner=False)
-def load_admin_data(url, is_gdrive=False):
-    try:
-        temp_dir = tempfile.mkdtemp()
-        zip_path = os.path.join(temp_dir, "data.zip")
-        if is_gdrive:
-            gdown.download(url, zip_path, quiet=True, fuzzy=True)
-        else:
-            response = requests.get(url, stream=True)
-            with open(zip_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192): f.write(chunk)
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref: zip_ref.extractall(temp_dir)
-        for root, dirs, files in os.walk(temp_dir):
-            for file in files:
-                if file.endswith(".shp") or file.endswith(".geojson"):
-                    gdf = gpd.read_file(os.path.join(root, file))
-                    col_map = {'STATE_UT': 'STATE', 'State': 'STATE', 'Name': 'District', 'Sub_dist': 'Subdistrict'}
-                    gdf.rename(columns=col_map, inplace=True)
-                    if gdf.crs != "EPSG:4326": gdf = gdf.to_crs("EPSG:4326")
-                    return gdf
-        return None
-    except: return None
-
-def geopandas_to_ee(gdf_row):
-    try:
-        gjson = json.loads(gdf_row.geometry.to_json())
-        geom = gjson['features'][0]['geometry'] if 'features' in gjson else gjson
-        return ee.Geometry(geom)
-    except: return None
-
-def calculate_area_by_class(image, region, scale):
-    area_image = ee.Image.pixelArea().addBands(image)
-    stats = area_image.reduceRegion(
-        reducer=ee.Reducer.sum().group(groupField=1, groupName='class_index'),
-        geometry=region, scale=scale, maxPixels=1e10, bestEffort=True
-    )
-    groups = stats.get('groups').getInfo()
-    data = []
-    total_area = 0
-    if not groups: return pd.DataFrame()
-    for item in groups:
-        area_ha = item['sum'] / 10000.0
-        total_area += area_ha
-        data.append({"Class": f"Class {int(item['class_index'])}", "Area (ha)": area_ha})
-    df = pd.DataFrame(data)
-    if not df.empty:
-        df = df.sort_values(by="Area (ha)", ascending=False)
-        df["%"] = ((df["Area (ha)"] / total_area) * 100).round(1)
-        df["Area (ha)"] = df["Area (ha)"].round(2)
-    return df
-
-# --- ADVANCED STATIC MAP GENERATOR ---
-def generate_static_map_display(image, roi, vis_params, title, cmap_colors=None, is_categorical=False, class_names=None):
-    try:
-        if isinstance(roi, ee.Geometry):
-            try:
-                roi_json = roi.getInfo() 
-                roi_bounds = roi.bounds().getInfo()['coordinates'][0]
-            except: return None
-        else:
-            roi_json = roi
-            roi_bounds = roi['coordinates'][0]
-
-        lons = [p[0] for p in roi_bounds]
-        lats = [p[1] for p in roi_bounds]
-        min_lon, max_lon = min(lons), max(lons)
-        min_lat, max_lat = min(lats), max(lats)
-        
-        width_deg = max_lon - min_lon
-        height_deg = max_lat - min_lat
-        if height_deg == 0: height_deg = 0.001
-        
-        aspect_ratio = (width_deg * np.cos(np.radians((min_lat + max_lat) / 2))) / height_deg
-        fig_width = 12 
-        fig_height = fig_width / aspect_ratio
-        if fig_height > 20: fig_height = 20
-        if fig_height < 4: fig_height = 4
-
-        # Background Imagery (Sentinel-2 Cloud Free)
-        s2_background = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")\
-            .filterBounds(roi).filterDate('2023-01-01', '2023-12-31')\
-            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\
-            .median().visualize(min=0, max=3000, bands=['B4', 'B3', 'B2'])
-        
-        if 'palette' in vis_params or 'min' in vis_params:
-            analysis_vis = image.visualize(**vis_params)
-        else:
-            analysis_vis = image 
-            
-        final_image = s2_background.blend(analysis_vis)
-
-        thumb_url = final_image.getThumbURL({
-            'region': roi_json, 'dimensions': 1000, 'format': 'png', 'crs': 'EPSG:4326'
-        })
-        
-        response = requests.get(thumb_url, timeout=120)
-        if response.status_code != 200: return None
-            
-        img_pil = Image.open(BytesIO(response.content))
-        
-        fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=300, facecolor='#ffffff')
-        extent = [min_lon, max_lon, min_lat, max_lat]
-        ax.imshow(img_pil, extent=extent, aspect='auto')
-        ax.set_title(title, fontsize=18, fontweight='bold', pad=20, color='#00204a')
-        
-        # Grid and Ticks
-        ax.tick_params(colors='black', labelsize=10)
-        for spine in ax.spines.values(): spine.set_edgecolor('black')
-        
-        # Legend Logic
-        if is_categorical and class_names and 'palette' in vis_params:
-            patches = [mpatches.Patch(color=c, label=n) for n, c in zip(class_names, vis_params['palette'])]
-            legend = ax.legend(handles=patches, loc='upper center', bbox_to_anchor=(0.5, -0.08), 
-                             frameon=False, ncol=min(len(class_names), 4))
-        elif cmap_colors and 'min' in vis_params:
-            cmap = mcolors.LinearSegmentedColormap.from_list("custom", cmap_colors)
-            norm = mcolors.Normalize(vmin=vis_params['min'], vmax=vis_params['max'])
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-            sm.set_array([])
-            cax = fig.add_axes([0.92, 0.15, 0.02, 0.7]) 
-            cbar = plt.colorbar(sm, cax=cax)
-            cbar.set_label('Index Value', color='black', fontsize=12)
-        
-        buf = BytesIO()
-        plt.savefig(buf, format='jpg', bbox_inches='tight', facecolor='#ffffff')
-        buf.seek(0)
-        plt.close(fig)
-        return buf
-    except: return None
-
-# --- 5. SIDEBAR ---
-with st.sidebar:
-    st.image("https://raw.githubusercontent.com/nitesh4004/GeoSarovar/main/geosarovar.png", use_container_width=True)
-    st.markdown("### 1. Select Module")
-    app_mode = st.radio("Choose Functionality:", ["📍 RWH Site Suitability", "⚠️ Encroachment (S1 SAR)", "Flood Extent Mapping"], label_visibility="collapsed")
-    st.markdown("---")
-    st.markdown("### 2. Location (ROI)")
-    roi_method = st.radio("Selection Mode", ["Upload KML", "Select Admin Boundary", "Point & Buffer"], label_visibility="collapsed")
-    new_roi = None
-
-    if roi_method == "Upload KML":
-        kml = st.file_uploader("Upload KML", type=['kml'])
-        if kml: new_roi = parse_kml(kml.read())
-    elif roi_method == "Select Admin Boundary":
-        admin_level = st.selectbox("Granularity", ["Districts", "Subdistricts", "States"])
-        data_url = None
-        is_drive = False
-        if admin_level == "Districts":
-            data_url = 'https://drive.google.com/uc?id=1tMyiUheQBcwwPwZQla67PwC5-AqenTmv'; is_drive = True
-        elif admin_level == "Subdistricts":
-            data_url = 'https://drive.google.com/uc?id=18lMyt2j3Xjz_Qk_2Kzppr8EVlVDx_yOv'; is_drive = True
-        elif admin_level == "States":
-            data_url = "https://github.com/nitesh4004/GeoFormatX/raw/main/STATE_BOUNDARY.zip"; is_drive = False
-        if data_url:
-            with st.spinner("Fetching Data..."):
-                gdf = load_admin_data(data_url, is_drive)
-            if gdf is not None:
-                if 'STATE' in gdf.columns:
-                    states = sorted(gdf['STATE'].astype(str).unique())
-                    sel_state = st.selectbox("State", states)
-                    gdf = gdf[gdf['STATE'] == sel_state]
-                    if 'District' in gdf.columns and not gdf.empty:
-                        dists = sorted(gdf['District'].astype(str).unique())
-                        sel_dist = st.selectbox("District", dists)
-                        gdf = gdf[gdf['District'] == sel_dist]
-                        if 'Subdistrict' in gdf.columns and not gdf.empty:
-                            subs = sorted(gdf['Subdistrict'].astype(str).unique())
-                            sel_sub = st.selectbox("Subdistrict", subs)
-                            gdf = gdf[gdf['Subdistrict'] == sel_sub]
-                if not gdf.empty:
-                    new_roi = geopandas_to_ee(gdf.iloc[[0]])
-                    st.info(f"Selected: {len(gdf)} Feature")
-    elif roi_method == "Point & Buffer":
-        c1, c2 = st.columns(2)
-        lat = c1.number_input("Lat", value=20.59)
-        lon = c2.number_input("Lon", value=78.96)
-        rad = st.number_input("Radius (m)", value=5000)
-        new_roi = ee.Geometry.Point([lon, lat]).buffer(rad).bounds()
-
-    if new_roi:
-        st.session_state['roi'] = new_roi.simplify(maxError=50) 
-        st.success("ROI Locked ✅")
-    st.markdown("---")
-    
-    params = {}
-    if app_mode == "📍 RWH Site Suitability":
-        st.markdown("### 3. Criteria Weights")
-        st.info("MCDA - Multi-Criteria Decision Analysis")
-        w_rain = st.slider("Precipitation Potential", 0, 100, 20)
-        w_slope = st.slider("Terrain & Drainage (TWI)", 0, 100, 40, help="Combines Slope and Topographic Wetness")
-        w_lulc = st.slider("Land Use Availability", 0, 100, 20)
-        w_soil = st.slider("Soil Retention (Clay)", 0, 100, 20)
-        
-        total_w = w_rain + w_slope + w_lulc + w_soil
-        st.markdown(f"**Total Weight: {total_w}** (Normalized automatically)")
-
-        st.markdown("### 4. Period")
-        start = st.date_input("From", datetime.now()-timedelta(365*5))
-        end = st.date_input("To", datetime.now())
-        params = {
-            'w_rain': w_rain, 'w_slope': w_slope, 'w_lulc': w_lulc, 'w_soil': w_soil, 
-            'start': start.strftime("%Y-%m-%d"), 'end': end.strftime("%Y-%m-%d"), 'total': total_w
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
 
-    elif app_mode == "⚠️ Encroachment (S1 SAR)":
-        st.markdown("### 3. Comparison Dates")
-        orbit = st.radio("Orbit Pass", ["BOTH", "ASCENDING", "DESCENDING"])
-        st.markdown("**Initial Period (Baseline)**")
-        col1, col2 = st.columns(2)
-        d1_start = col1.date_input("Start 1", datetime(2018, 6, 1))
-        d1_end = col2.date_input("End 1", datetime(2018, 9, 30))
-        st.markdown("**Final Period (Current)**")
-        col3, col4 = st.columns(2)
-        d2_start = col3.date_input("Start 2", datetime(2024, 6, 1))
-        d2_end = col4.date_input("End 2", datetime(2024, 9, 30))
-        params = {'d1_start': d1_start.strftime("%Y-%m-%d"), 'd1_end': d1_end.strftime("%Y-%m-%d"), 'd2_start': d2_start.strftime("%Y-%m-%d"), 'd2_end': d2_end.strftime("%Y-%m-%d"), 'orbit': orbit}
-    
-    elif app_mode == "Flood Extent Mapping":
-        st.markdown("### 3. Flood Event Details")
-        orbit = st.radio("Orbit Pass", ["BOTH", "ASCENDING", "DESCENDING"])
-        st.markdown("**Before Flood (Dry)**")
-        col1, col2 = st.columns(2)
-        pre_start = col1.date_input("Pre Start", datetime(2023, 4, 1))
-        pre_end = col2.date_input("Pre End", datetime(2023, 6, 1))
-        st.markdown("**After Flood (Wet)**")
-        col3, col4 = st.columns(2)
-        post_start = col3.date_input("Post Start", datetime(2023, 9, 29))
-        post_end = col4.date_input("Post End", datetime(2023, 10, 15))
-        threshold = st.slider("Difference Threshold", 1.0, 1.5, 1.25, 0.05)
-        params = {'pre_start': pre_start.strftime("%Y-%m-%d"), 'pre_end': pre_end.strftime("%Y-%m-%d"), 'post_start': post_start.strftime("%Y-%m-%d"), 'post_end': post_end.strftime("%Y-%m-%d"), 'threshold': threshold, 'orbit': orbit}
+        :root {
+            /* ADJUSTED: Reduced width for 75% zoom feel */
+            --sidebar-width: 270px; 
+            --toolbar-scale: 0.85; /* Started smaller by default */
+        }
 
-    st.markdown("###")
-    if st.button("RUN ANALYSIS 🚀"):
-        if st.session_state['roi']:
-            st.session_state['calculated'] = True
-            st.session_state['mode'] = app_mode
-            st.session_state['params'] = params
-        else:
-            st.error("Select ROI first.")
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #0f172a; 
+            overflow: hidden;
+            font-size: 12px; /* Global font size reduction */
+        }
 
-# --- 6. MAIN CONTENT ---
-st.markdown(f"""
-<div class="hud-header">
-    <div>
-        <div class="hud-title">GeoSarovar</div>
-        <div style="color:#5c6b7f; font-size:0.9rem; font-weight:600;">MODULE: {app_mode.upper()}</div>
-    </div>
-    <div style="text-align:right;">
-        <span style="background:#e6f0ff; color:#00204a; padding:5px 12px; border-radius:20px; font-weight:bold; font-size:0.8rem;">LIVE SYSTEM</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        /* --- Modern Glass Sidebar --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: 220px; 
+            max-width: 80vw;
+            background-color: rgba(30, 41, 59, 0.95); 
+            color: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            padding: 16px; /* Reduced from 24px */
+            box-shadow: 4px 0 24px rgba(0,0,0,0.25);
+            z-index: 2000;
+            transition: margin-left 0.3s ease; 
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            position: relative;
+            margin-left: 0;
+            flex-shrink: 0;
+        }
 
-# Helper for Safe Map Loading
-def get_safe_map(height=500):
-    m = geemap.Map(height=height, basemap="HYBRID")
-    return m
+        .sidebar.collapsed {
+            margin-left: calc(var(--sidebar-width) * -1);
+        }
 
-if not st.session_state['calculated']:
-    st.info("👈 Please select a module and a location in the sidebar to begin.")
-    m = get_safe_map(500)
-    if st.session_state['roi']:
-        m.centerObject(st.session_state['roi'], 12)
-        m.addLayer(ee.Image().paint(st.session_state['roi'], 2, 3), {'palette': 'yellow'}, 'ROI')
-    m.to_streamlit()
+        /* Resizer Handle */
+        .sidebar-resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            z-index: 2001;
+            transition: background 0.2s;
+        }
+        .sidebar-resizer:hover, .sidebar-resizer.resizing {
+            background: #00d2d3;
+        }
 
-else:
-    roi = st.session_state['roi']
-    mode = st.session_state['mode']
-    p = st.session_state['params']
-    col_map, col_res = st.columns([3, 1])
-    m = get_safe_map(700)
-    m.centerObject(roi, 13)
-    image_to_export = None 
+        /* Toggle Button */
+        .sidebar-toggle {
+            position: absolute;
+            right: -32px; /* Adjusted */
+            bottom: 15px; 
+            width: 32px; /* Smaller */
+            height: 32px; /* Smaller */
+            background-color: #00d2d3;
+            color: #0f172a;
+            border-radius: 0 6px 6px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        .sidebar-toggle:hover {
+            width: 38px;
+            background-color: #22d3ee;
+        }
 
-    # ==========================================
-    # LOGIC A: RWH SITE SUITABILITY (IMPROVED)
-    # ==========================================
-    if mode == "📍 RWH Site Suitability":
-        with st.spinner("Calculating Hydrological Suitability..."):
-            
-            # --- 1. DATA ACQUISITION & NORMALIZATION ---
-            
-            # A. Precipitation (CHIRPS)
-            rain = ee.ImageCollection("UCSB-CHG/CHIRPS/PENTAD")\
-                .filterDate(p['start'], p['end']).select('precipitation').mean().clip(roi)
-            # Normalize rain min-max within ROI for relative difference
-            min_max_rain = rain.reduceRegion(ee.Reducer.minMax(), roi, 1000).getInfo()
-            r_min = min_max_rain.get('precipitation_min', 0)
-            r_max = min_max_rain.get('precipitation_max', 100)
-            rain_n = rain.unitScale(r_min, r_max)
+        .logo {
+            font-size: 20px; /* Reduced from 26px */
+            font-weight: 800;
+            margin-bottom: 18px; /* Reduced */
+            background: linear-gradient(to right, #00d2d3, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.5px;
+            flex-shrink: 0;
+        }
 
-            # B. Topography (Slope & TWI)
-            dem = ee.Image("NASA/NASADEM_HGT/001").select('elevation').clip(roi)
-            slope = ee.Terrain.slope(dem)
-            
-            # Calculate TWI (Topographic Wetness Index) for Flow Accumulation
-            # Using HydroSHEDS Upstream Area as proxy for Flow Accumulation to reduce noise
-            flow_acc = ee.Image("WWF/HydroSHEDS/15ACC").select('b1').clip(roi)
-            # TWI formula approx: ln(a / tan(b))
-            twi = flow_acc.log().subtract(slope.multiply(0.01745).tan().log()).rename('twi')
-            
-            # Normalize TWI (Higher is better for collection)
-            twi_n = twi.unitScale(2, 12).clamp(0, 1) # Clamp outliers
-            
-            # Normalize Slope (Lower is generally better, but not 0)
-            # Ideal slope 1-5%. > 20% is bad.
-            slope_n = ee.Image(1).subtract(slope.clamp(0, 25).unitScale(0, 25))
+        /* Collapsible Sections */
+        .action-section {
+            margin-bottom: 10px; /* Reduced */
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0; 
+        }
 
-            # Combined Terrain Score (50% TWI, 50% Slope)
-            terrain_score = twi_n.add(slope_n).divide(2)
+        .action-header {
+            font-size: 10px; /* Reduced */
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+        }
+        .action-header:hover {
+            color: #fff;
+        }
+        .action-header i {
+            transition: transform 0.3s;
+        }
+        .action-header.collapsed i {
+            transform: rotate(-90deg);
+        }
 
-            # C. LULC (ESA WorldCover)
-            lulc = ee.Image("ESA/WorldCover/v100/2020").select('Map').clip(roi)
-            # Remap: Ag(40)/Grass(30)/Scrub(20) = High. Forest(10) = Med. Urban(50)/Water(80) = Mask.
-            lulc_score = lulc.remap(
-                [10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 100], 
-                [0.5, 0.8, 0.9, 1.0, 0.0, 0.6, 0.1, 0.0, 0.1, 0.1, 0.1]
-            ).rename('lulc_score')
-            
-            # Strict Mask for exclusion (Urban & Water)
-            exclusion_mask = lulc.neq(50).And(lulc.neq(80)).And(slope.lt(20))
-
-            # D. Soil (Clay Content -> Retention)
-            try:
-                soil = ee.Image("OpenLandMap/SOL/SOL_CLAY-WFRACTION_USDA-3A1A1A_M/v02").select('b0').mean().clip(roi)
-                soil_n = soil.unitScale(0, 60) # Normalize clay 0-60%
-            except:
-                soil_n = ee.Image(0.5).clip(roi)
-
-            # --- 2. WEIGHTED OVERLAY (MCDA) ---
-            # Avoid division by zero
-            tot = p['total'] if p['total'] > 0 else 1
-            
-            suitability = (
-                rain_n.multiply(p['w_rain']/tot)
-                .add(terrain_score.multiply(p['w_slope']/tot))
-                .add(lulc_score.multiply(p['w_lulc']/tot))
-                .add(soil_n.multiply(p['w_soil']/tot))
-            )
-            
-            # Apply Masks
-            final_suitability = suitability.updateMask(exclusion_mask).clip(roi)
-            
-            # Visualization
-            vis = {'min': 0.3, 'max': 0.8, 'palette': ['#d7191c', '#fdae61', '#ffffbf', '#a6d96a', '#1a9641']}
-            
-            m.addLayer(dem, {'min':0, 'max':1000, 'palette':['black','white']}, 'DEM (Hidden)', False)
-            m.addLayer(final_suitability, vis, 'RWH Suitability Index')
-            m.add_colorbar(vis, label="RWH Potential (MCDA Score)")
-            
-            image_to_export = final_suitability
-
-            # Find Peak Suitability Points (Potential Check Dams)
-            try:
-                # Find local maxima in highly suitable areas (>0.7)
-                high_suit = final_suitability.gt(0.75)
-                vectors = high_suit.reduceToVectors(
-                    geometry=roi, scale=100, geometryType='centroid', 
-                    eightConnected=False, maxPixels=1e8
-                )
-                # Limit to top 5 points to avoid clutter
-                m.addLayer(vectors, {'color': 'blue'}, 'Suggested Locations')
-            except: pass
-
-            with col_res:
-                st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-                st.markdown('<div class="card-label">📊 CLASSIFICATION</div>', unsafe_allow_html=True)
-                
-                # Classify 1-5
-                classes = ee.Image(0).where(final_suitability.lt(0.3), 1)\
-                    .where(final_suitability.gte(0.3).And(final_suitability.lt(0.5)), 2)\
-                    .where(final_suitability.gte(0.5).And(final_suitability.lt(0.65)), 3)\
-                    .where(final_suitability.gte(0.65).And(final_suitability.lt(0.8)), 4)\
-                    .where(final_suitability.gte(0.8), 5).updateMask(exclusion_mask).clip(roi)
-                
-                df = calculate_area_by_class(classes, roi, 30)
-                name_map = {"Class 1": "Very Low", "Class 2": "Low", "Class 3": "Moderate", "Class 4": "High", "Class 5": "Optimal"}
-                if not df.empty:
-                    df['Class'] = df['Class'].map(name_map).fillna(df['Class'])
-                    st.dataframe(df, hide_index=True, use_container_width=True)
-                else:
-                    st.warning("No suitable areas found within thresholds.")
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    # ==========================================
-    # LOGIC B: ENCROACHMENT DETECTION (SENTINEL-1)
-    # ==========================================
-    elif mode == "⚠️ Encroachment (S1 SAR)":
-        with st.spinner("Processing Sentinel-1 SAR Data..."):
-            
-            def get_sar_collection(start_d, end_d, roi_geom, orbit_pass):
-                s1 = ee.ImageCollection('COPERNICUS/S1_GRD')\
-                    .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))\
-                    .filter(ee.Filter.eq('instrumentMode', 'IW'))\
-                    .filterDate(start_d, end_d)\
-                    .filterBounds(roi_geom)
-                if orbit_pass != "BOTH":
-                    s1 = s1.filter(ee.Filter.eq('orbitProperties_pass', orbit_pass))
-                return s1
-
-            def process_water_mask(col, roi_geom):
-                if col.size().getInfo() == 0: return None, "N/A"
-                date_found = ee.Date(col.first().get('system:time_start')).format('YYYY-MM-dd').getInfo()
-                def speckle_filter(img): return img.select('VV').focal_median(50, 'circle', 'meters').rename('VV_smoothed')
-                mosaic = col.map(speckle_filter).min().clip(roi_geom)
-                water_mask = mosaic.lt(-16).selfMask()
-                return water_mask, date_found
-
-            try:
-                col_initial = get_sar_collection(p['d1_start'], p['d1_end'], roi, p['orbit'])
-                col_final = get_sar_collection(p['d2_start'], p['d2_end'], roi, p['orbit'])
-
-                water_initial, date_init = process_water_mask(col_initial, roi)
-                water_final, date_fin = process_water_mask(col_final, roi)
-
-                if water_initial and water_final:
-                    encroachment = water_initial.unmask(0).And(water_final.unmask(0).Not()).selfMask()
-                    new_water = water_initial.unmask(0).Not().And(water_final.unmask(0)).selfMask()
-                    stable_water = water_initial.unmask(0).And(water_final.unmask(0)).selfMask()
-
-                    change_map = ee.Image(0).where(stable_water, 1).where(encroachment, 2).where(new_water, 3).clip(roi).selfMask()
-                    image_to_export = change_map
-
-                    left_layer = geemap.ee_tile_layer(water_initial, {'palette': 'blue'}, "Initial Water")
-                    right_layer = geemap.ee_tile_layer(water_final, {'palette': 'cyan'}, "Final Water")
-                    m.split_map(left_layer, right_layer)
-
-                    m.addLayer(encroachment, {'palette': 'red'}, '🔴 Encroachment (Loss)')
-                    m.addLayer(new_water, {'palette': 'blue'}, '🔵 New Water (Gain)')
-                    
-                    pixel_area = encroachment.multiply(ee.Image.pixelArea())
-                    val_loss = pixel_area.reduceRegion(ee.Reducer.sum(), roi, 10, maxPixels=1e9).values().get(0).getInfo()
-                    loss_ha = round((val_loss or 0) / 10000, 2)
-                    
-                    pixel_area_gain = new_water.multiply(ee.Image.pixelArea())
-                    val_gain = pixel_area_gain.reduceRegion(ee.Reducer.sum(), roi, 10, maxPixels=1e9).values().get(0).getInfo()
-                    gain_ha = round((val_gain or 0) / 10000, 2)
-
-                    with col_res:
-                        st.markdown('<div class="alert-card">', unsafe_allow_html=True)
-                        st.markdown(f"### ⚠️ Change Report")
-                        st.metric("🔴 Water Loss", f"{loss_ha} Ha", help="Potential Encroachment")
-                        st.metric("🔵 Water Gain", f"{gain_ha} Ha", help="Flooding/New Storage")
-                        
-                        st.markdown(f"""
-                        <div class="date-badge">📅 Base: {date_init}</div>
-                        <div class="date-badge">📅 Curr: {date_fin}</div>
-                        """, unsafe_allow_html=True)
-                        st.markdown("</div>", unsafe_allow_html=True)
-
-                        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-                        st.markdown('<div class="card-label">⏱️ TIMELAPSE</div>', unsafe_allow_html=True)
-                        if st.button("Create Timelapse"):
-                            with st.spinner("Generating GIF..."):
-                                try:
-                                    s1_tl = get_sar_collection(p['d1_start'], p['d2_end'], roi, p['orbit']).select('VV')
-                                    video_args = {'dimensions': 600, 'region': roi, 'framesPerSecond': 5, 'min': -25, 'max': -5, 'palette': ['black', 'blue', 'white']}
-                                    monthly = geemap.create_timeseries(s1_tl, p['d1_start'], p['d2_end'], frequency='year', reducer='median')
-                                    gif_url = monthly.getVideoThumbURL(video_args)
-                                    st.image(gif_url, caption="Radar Intensity (Dark=Water)", use_container_width=True)
-                                except Exception as e: st.error(f"Timelapse Error: {e}")
-                        st.markdown("</div>", unsafe_allow_html=True)
-                else:
-                    st.warning("Insufficient SAR data for selected dates and orbit.")
-                    image_to_export = ee.Image(0)
-            except Exception as e:
-                st.error(f"Computation Error: {e}")
-
-    # ==========================================
-    # LOGIC C: FLOOD EXTENT MAPPING
-    # ==========================================
-    elif mode == "Flood Extent Mapping":
-        with st.spinner("Processing Flood Extent..."):
-            try:
-                collection = ee.ImageCollection('COPERNICUS/S1_GRD') \
-                    .filter(ee.Filter.eq('instrumentMode', 'IW')) \
-                    .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH')) \
-                    .filter(ee.Filter.eq('resolution_meters', 10)) \
-                    .filterBounds(roi) \
-                    .select('VH')
-                
-                if p['orbit'] != "BOTH":
-                    collection = collection.filter(ee.Filter.eq('orbitProperties_pass', p['orbit']))
-
-                before_col = collection.filterDate(p['pre_start'], p['pre_end'])
-                after_col = collection.filterDate(p['post_start'], p['post_end'])
-
-                if before_col.size().getInfo() > 0 and after_col.size().getInfo() > 0:
-                    date_pre = ee.Date(before_col.first().get('system:time_start')).format('YYYY-MM-dd').getInfo()
-                    date_post = ee.Date(after_col.first().get('system:time_start')).format('YYYY-MM-dd').getInfo()
-
-                    before = before_col.median().clip(roi)
-                    after = after_col.mosaic().clip(roi)
-                    
-                    smoothing = 50
-                    before_f = before.focal_mean(smoothing, 'circle', 'meters')
-                    after_f = after.focal_mean(smoothing, 'circle', 'meters')
-                    
-                    difference = after_f.divide(before_f)
-                    difference_binary = difference.gt(p['threshold'])
-                    
-                    gsw = ee.Image("JRC/GSW1_4/GlobalSurfaceWater")
-                    occurrence = gsw.select('occurrence')
-                    permanent_water_mask = occurrence.gt(30)
-                    
-                    flooded = difference_binary.updateMask(permanent_water_mask.Not())
-                    
-                    dem = ee.Image('WWF/HydroSHEDS/03VFDEM')
-                    slope = ee.Algorithms.Terrain(dem).select('slope')
-                    flooded = flooded.updateMask(slope.lt(5))
-                    
-                    flooded = flooded.updateMask(flooded.connectedPixelCount().gte(8))
-                    flooded = flooded.selfMask()
-                    
-                    image_to_export = flooded
-
-                    m.addLayer(before_f, {'min': -25, 'max': 0}, 'Before Flood (Dry)', False)
-                    m.addLayer(after_f, {'min': -25, 'max': 0}, 'After Flood (Wet)', True)
-                    m.addLayer(flooded, {'palette': ['#0000FF']}, '🌊 Estimated Flood Extent')
-                    
-                    flood_stats = flooded.multiply(ee.Image.pixelArea()).reduceRegion(reducer=ee.Reducer.sum(), geometry=roi, scale=10, bestEffort=True)
-                    flood_area_ha = round(flood_stats.values().get(0).getInfo() / 10000, 2)
-
-                    with col_res:
-                        st.markdown('<div class="alert-card">', unsafe_allow_html=True)
-                        st.markdown("### 🌊 Flood Report")
-                        st.metric("Estimated Extent", f"{flood_area_ha} Ha")
-                        st.markdown(f"""
-                        <div class="date-badge">📅 Pre: {date_pre}</div>
-                        <div class="date-badge">📅 Post: {date_post}</div>
-                        """, unsafe_allow_html=True)
-                        st.caption(f"Orbit: {p['orbit']} | Pol: VH")
-                        st.markdown("</div>", unsafe_allow_html=True)
-
-                else:
-                    st.error(f"No images found for Orbit: {p['orbit']} in these dates.")
-
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-    # --- COMMON EXPORT TOOLS ---
-    with col_res:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.markdown('<div class="card-label">📥 EXPORTS</div>', unsafe_allow_html=True)
+        .section-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out, margin-bottom 0.3s;
+            max-height: 500px;
+            opacity: 1;
+            margin-bottom: 15px;
+        }
         
-        if st.button("Save to Drive (GeoTIFF)"):
-            if mode == "📍 RWH Site Suitability": img = suitability
-            elif mode == "⚠️ Encroachment (S1 SAR)": img = image_to_export if image_to_export else ee.Image(0)
-            elif mode == "Flood Extent Mapping": img = image_to_export if image_to_export else ee.Image(0)
-            
-            ee.batch.Export.image.toDrive(
-                image=img, description=f"GeoSarovar_Export_{datetime.now().strftime('%Y%m%d')}",
-                scale=30, region=roi, folder='GeoSarovar_Exports'
-            ).start()
-            st.toast("Export started! Check Google Drive.")
+        .section-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
+        }
 
-        st.markdown("---")
-        report_title = st.text_input("Report Title", f"Analysis: {mode}")
-        if st.button("Generate Map Image"):
-            with st.spinner("Rendering..."):
-                img_rep = image_to_export if image_to_export else ee.Image(0)
-                if mode == "Flood Extent Mapping":
-                    vis_rep = {'min': 0, 'max': 1, 'palette': ['#0000FF']}
-                    is_categorical = True; class_names = ['Flood Extent']; cmap = None
-                elif mode == "⚠️ Encroachment (S1 SAR)": 
-                    vis_rep = {'min': 1, 'max': 3, 'palette': ['cyan', 'red', 'blue']}
-                    is_categorical = True; class_names = ['Stable Water', 'Encroachment', 'New Water']; cmap = None
-                elif mode == "📍 RWH Site Suitability": 
-                    vis_rep = {'min': 0.3, 'max': 0.8, 'palette': ['#d7191c', '#fdae61', '#ffffbf', '#a6d96a', '#1a9641']}
-                    cmap = vis_rep['palette']; is_categorical = False; class_names = None
+        /* Modern Inputs - Compact */
+        .sidebar-input {
+            background-color: #334155;
+            border: 1px solid #475569;
+            color: #f1f5f9;
+            padding: 7px 10px; /* Reduced padding */
+            border-radius: 6px;
+            font-size: 11px; /* Reduced font */
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .sidebar-input:focus {
+            outline: none;
+            border-color: #00d2d3;
+            background-color: #1e293b;
+            box-shadow: 0 0 0 2px rgba(0, 210, 211, 0.15);
+        }
+
+        /* Modern Buttons - Compact */
+        .action-btn {
+            width: 100%;
+            padding: 7px; /* Reduced padding */
+            margin-top: 8px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 11px; /* Reduced font */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: linear-gradient(135deg, #00d2d3 0%, #0891b2 100%); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        
+        .btn-secondary { background-color: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .btn-secondary:hover { background-color: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+
+        .btn-danger { background-color: #ef4444; color: white; border: 1px solid #dc2626; }
+        .btn-danger:hover { background-color: #dc2626; }
+        
+        .btn-dark { background-color: #334155; color: #e2e8f0; border: 1px solid #475569; }
+        .btn-dark:hover { background-color: #475569; color: white; }
+        
+        .btn-outline { background: transparent; border: 1px dashed #64748b; color: #94a3b8; }
+        .btn-outline:hover { border-color: #00d2d3; color: #00d2d3; background: rgba(0, 210, 211, 0.05); }
+        
+        .btn-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+        .btn-warning:hover { opacity: 0.9; }
+
+        /* List Area */
+        .boundary-list-container {
+            flex: 1; 
+            overflow-y: auto;
+            margin-top: 5px;
+            padding-right: 4px;
+            min-height: 80px; 
+        }
+        .boundary-list-container::-webkit-scrollbar { width: 4px; }
+        .boundary-list-container::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+        /* Card Items - Compact */
+        .boundary-item {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 10px; /* Compact padding */
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .boundary-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: #00d2d3;
+            border-radius: 3px 0 0 3px;
+        }
+        .boundary-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border-color: #475569;
+            background: #253346;
+        }
+        
+        .boundary-info { flex: 1; cursor: pointer; }
+        .boundary-name { font-size: 12px; font-weight: 600; color: #f8fafc; }
+        .boundary-meta { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+        .boundary-stats { 
+            font-size: 9px; 
+            color: #00d2d3; 
+            margin-top: 3px; 
+            background: rgba(0, 210, 211, 0.1); 
+            display: inline-block; 
+            padding: 1px 5px; 
+            border-radius: 3px; 
+            font-weight: 600;
+        }
+
+        .icon-btn {
+            width: 24px; /* Smaller */
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            color: #94a3b8;
+            transition: all 0.2s;
+            font-size: 11px;
+        }
+        .icon-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+        .icon-btn.delete:hover { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        /* Map Area */
+        .main-content {
+            flex: 1;
+            position: relative;
+            background: #0f172a;
+            transition: width 0.3s ease; 
+        }
+
+        #map { width: 100%; height: 100%; z-index: 1; }
+
+        /* LEAFLET ZOOM OVERRIDES 
+           Scale down the native leaflet controls to match the 75% theme 
+        */
+        .leaflet-control-container .leaflet-top, 
+        .leaflet-control-container .leaflet-bottom {
+            transform: scale(0.85); /* Shrink controls */
+        }
+        .leaflet-top.leaflet-left { transform-origin: top left; }
+        .leaflet-top.leaflet-right { transform-origin: top right; }
+        .leaflet-bottom.leaflet-left { transform-origin: bottom left; }
+        .leaflet-bottom.leaflet-right { transform-origin: bottom right; }
+
+        /* Floating Controls */
+        .coord-box {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: rgba(15, 23, 42, 0.8);
+            color: #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 10px;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1);
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Custom Edit Handles (Dots) */
+        .leaflet-editing-icon {
+            border-radius: 50% !important;
+            background-color: #00d2d3 !important;
+            border: 2px solid #fff !important;
+            width: 10px !important; /* Smaller dots */
+            height: 10px !important;
+            margin-left: -5px !important;
+            margin-top: -5px !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+        .leaflet-editing-icon:hover {
+            transform: scale(1.2);
+            background-color: #fff !important;
+            border-color: #00d2d3 !important;
+        }
+
+        /* --- UPDATED TOOLBAR SCALING LOGIC --- */
+        .leaflet-draw-toolbar {
+            /* Using 'zoom' creates a layout-aware scale, preventing overlaps */
+            zoom: var(--toolbar-scale);
+        }
+
+        /* Modal Glass - Compact */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 4000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Higher Z-Index for Confirm Modal so it appears above Properties Modal */
+        #confirmModal { z-index: 5000; }
+        
+        .modal-content {
+            background: #1e293b;
+            padding: 20px; /* Reduced from 30px */
+            border-radius: 12px;
+            width: 380px; /* Reduced from 500px */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+        }
+        .modal-header { font-size: 15px; font-weight: 700; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px; color: #f1f5f9; }
+        
+        .form-label { color: #94a3b8; font-size: 10px; font-weight: 600; margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-input {
+            background: #0f172a; border: 1px solid #334155; color: white;
+            padding: 8px; /* Reduced */
+            border-radius: 6px; width: 100%; margin-bottom: 12px;
+            font-size: 12px;
+        }
+        .form-input:focus { border-color: #00d2d3; outline: none; }
+
+        .stats-badge {
+            background: rgba(0, 210, 211, 0.1);
+            border: 1px solid rgba(0, 210, 211, 0.2);
+            border-radius: 8px;
+            padding: 10px; /* Reduced */
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .stat-label { color: #22d3ee; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .stat-value { font-size: 15px; font-weight: 700; color: white; }
+
+        .user-profile {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 15px; /* Reduced */
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .avatar-circle {
+            width: 28px; height: 28px; /* Smaller */
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        #statusToast {
+            font-size: 12px;
+            padding: 8px 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar" id="mainSidebar">
+        <div class="sidebar-resizer" id="sidebarResizer"></div>
+
+        <div class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+            <i class="fa-solid fa-bars"></i>
+        </div>
+
+        <div class="logo">
+            <i class="fa-solid fa-satellite-dish"></i> KaMaL
+        </div>
+        
+        <div class="action-section">
+            <div class="action-header" onclick="toggleSection('navContent', this)">
+                <span>Navigation</span>
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+            </div>
+            <div id="navContent" class="section-content">
+                <div class="flex gap-2 mb-2">
+                    <input type="text" id="searchCoords" placeholder="Search Place (e.g. Delhi, Farm No 4)" class="sidebar-input">
+                    <button id="searchBtn" class="action-btn btn-primary" style="margin-top:0; width: auto; padding: 0 10px;">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
                 
-                buf = generate_static_map_display(img_rep, roi, vis_rep, report_title, cmap_colors=cmap, is_categorical=is_categorical, class_names=class_names)
-                if buf:
-                    st.download_button("Download JPG", buf, "GeoSarovar_Map.jpg", "image/jpeg", use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+                <div class="flex gap-2">
+                     <button id="locateBtn" class="action-btn btn-dark" style="margin-top:0; flex: 1;">
+                        <i class="fa-solid fa-location-crosshairs"></i> Use My GPS
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    with col_map:
-        m.to_streamlit()
+        <div class="action-section">
+            <div class="action-header" onclick="toggleSection('toolContent', this)">
+                <span>Toolkit</span>
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+            </div>
+            <div id="toolContent" class="section-content">
+                <input type="text" id="kmlFileName" placeholder="Filename (e.g. My_Farm)" class="sidebar-input mb-2 mt-2">
+                
+                <div class="flex gap-2 mt-2">
+                    <button id="downloadBtn" class="action-btn btn-dark" style="margin-top:0;" title="Download KML">
+                        <i class="fa-solid fa-download"></i> Save
+                    </button>
+                    <button onclick="document.getElementById('kmlFileInput').click()" class="action-btn btn-outline" style="margin-top:0;" title="Upload KML">
+                        <i class="fa-solid fa-upload"></i> Load
+                    </button>
+                    <button id="clearBtn" class="action-btn btn-secondary" style="margin-top:0; width: auto;" title="Clear All">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <input type="file" id="kmlFileInput" accept=".kml" style="display: none;" onchange="handleFileUpload(this)">
+
+                <div class="mt-3 border-t border-slate-700 pt-2">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wider">Map Controls</div>
+                    
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[11px] text-gray-300 flex items-center gap-2">
+                            <i class="fa-solid fa-toolbox text-cyan-500"></i> Draw Tools
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="showToolbar" class="sr-only peer" checked onchange="updateToolbarSettings()">
+                            <div class="w-6 h-3 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2 after:w-2 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[11px] text-gray-300 flex items-center gap-2">
+                            <i class="fa-solid fa-infinity text-cyan-500"></i> Continuous Mode
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="continuousMode" class="sr-only peer">
+                            <div class="w-6 h-3 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2 after:w-2 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[11px] text-gray-300 flex items-center gap-2">
+                            <i class="fa-solid fa-lock text-cyan-500"></i> Lock Map
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="lockMap" class="sr-only peer" onchange="toggleMapLock()">
+                            <div class="w-6 h-3 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2 after:w-2 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[11px] text-gray-300 flex items-center gap-2">
+                            <i class="fa-solid fa-arrows-up-down-left-right text-cyan-500"></i> Position
+                        </label>
+                        <select id="toolbarPos" class="bg-slate-700 text-white text-[10px] rounded border border-slate-600 p-1 focus:border-cyan-500 outline-none w-20" onchange="updateToolbarSettings()">
+                            <option value="topleft">Top Left</option>
+                            <option value="topright" selected>Top Right</option>
+                            <option value="bottomleft">Bottom Left</option>
+                            <option value="bottomright">Bottom Right</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] text-gray-300 flex items-center gap-2">
+                            <i class="fa-solid fa-expand text-cyan-500"></i> Size
+                        </label>
+                        <div class="flex items-center gap-2 w-20">
+                            <input type="range" id="toolbarSize" min="0.5" max="1.5" step="0.1" value="0.8" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-cyan-500" oninput="updateToolbarSettings()">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="action-header flex justify-between items-center mt-2" style="cursor: default;">
+            <span>My Fields</span>
+            <span id="fieldCount" class="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full">0</span>
+        </div>
+        
+        <div class="boundary-list-container" id="boundaryList">
+            <div class="text-center text-gray-500 text-[10px] mt-8">
+                <i class="fa-regular fa-map mb-2 text-xl opacity-50"></i><br>
+                Start drawing on the map
+            </div>
+        </div>
+
+        <div class="user-profile">
+            <div class="avatar-circle">NK</div>
+            <div>
+                <div class="text-[11px] font-semibold">Nitesh Kumar</div>
+                <div class="text-[9px] text-green-400">● Online</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="statusToast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-full shadow-lg z-[3000] opacity-0 transition-opacity pointer-events-none flex items-center gap-2 border border-slate-700 text-xs">
+            <i class="fa-solid fa-circle-info text-cyan-400"></i>
+            <span id="toastMsg">Notification</span>
+        </div>
+
+        <div id="map"></div>
+        
+        <div class="coord-box" id="coords">00.0000, 00.0000</div>
+    </div>
+
+    <div id="propModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Field Properties</span>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white float-right"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Field Name</label>
+                <input type="text" id="kmlName" class="form-input" placeholder="e.g. North Plot">
+            </div>
+
+            <div id="modalStats" class="stats-badge">
+                <div class="stat-item">
+                    <div class="stat-label">Area</div>
+                    <div class="stat-value" id="statArea">0.00 <span class="text-[10px] font-normal opacity-70">m²</span></div>
+                </div>
+                <div class="stat-item border-l border-cyan-500/20 pl-4">
+                    <div class="stat-label">Perimeter</div>
+                    <div class="stat-value" id="statPerimeter">0 <span class="text-[10px] font-normal opacity-70">m</span></div>
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">Notes</label>
+                <textarea id="kmlDesc" class="form-input" rows="3" placeholder="Add crop details, soil type, etc..."></textarea>
+            </div>
+
+            <div class="flex justify-between items-center mt-4 pt-3 border-t border-slate-700">
+                <button onclick="triggerDeleteInModal()" class="action-btn btn-danger" style="margin:0; width:auto;" title="Delete this field">
+                    <i class="fa-solid fa-trash"></i> Delete
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="closeModal()" class="action-btn btn-dark" style="margin:0; width:auto;">Cancel</button>
+                    <button onclick="saveProperties()" class="action-btn btn-primary" style="margin:0; width:auto;">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content" style="width: 300px; text-align: center;">
+            <div class="mb-3">
+                <div class="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-triangle-exclamation text-2xl text-red-500"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-1">Delete Boundary?</h3>
+                <p class="text-gray-400 text-[10px]">Are you sure you want to delete this field? This action cannot be undone.</p>
+            </div>
+            
+            <div class="flex gap-2 mt-4">
+                <button onclick="closeConfirmModal()" class="action-btn btn-dark" style="margin-top:0;">Cancel</button>
+                <button onclick="confirmDeleteAction()" class="action-btn btn-danger" style="margin-top:0;">
+                    Yes, Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://unpkg.com/tokml@0.4.0/tokml.js"></script>
+
+    <script>
+        // 1. Initialize Map
+        var map = L.map('map', { zoomControl: false }).setView([20.5937, 78.9629], 5);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // 2. Layers
+        // OpenStreetMap
+        var osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        var osmLayer = L.tileLayer(osmUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 19 });
+
+        // Google Hybrid
+        var googleHybridUrl = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+        var googleHybridLayer = L.tileLayer(googleHybridUrl, {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: 'Map data &copy; Google'
+        });
+
+        // Google Streets
+        var googleStreetsUrl = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+        var googleStreetsLayer = L.tileLayer(googleStreetsUrl, {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: 'Map data &copy; Google'
+        });
+
+        // Google Terrain
+        var googleTerrainUrl = 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}';
+        var googleTerrainLayer = L.tileLayer(googleTerrainUrl, {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: 'Map data &copy; Google'
+        });
+
+        // Esri Satellite (Adding back as an option)
+        var esriUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        var esriLayer = L.tileLayer(esriUrl, { attribution: 'Tiles © Esri', maxZoom: 19 });
+
+        // Set default layer
+        googleHybridLayer.addTo(map);
+
+        // Add Layer Control
+        var baseMaps = {
+            "Google Hybrid": googleHybridLayer,
+            "Google Streets": googleStreetsLayer,
+            "Google Terrain": googleTerrainLayer,
+            "OpenStreetMap": osmLayer,
+            "Esri Satellite": esriLayer
+        };
+
+        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+        // --- Marker Icon (Plus Sign) ---
+        var customMarkerIcon = L.divIcon({
+            className: 'custom-marker-icon',
+            html: '<i class="fa-solid fa-plus" style="color: #00d2d3; font-size: 24px; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.4)); font-weight: 900;"></i>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12], // Centered
+            popupAnchor: [0, -12]
+        });
+
+        // 3. Drawing Features
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        // --- Dynamic Draw Control Logic ---
+        var drawControl;
+
+        function updateToolbarSettings() {
+            var show = document.getElementById('showToolbar').checked;
+            var pos = document.getElementById('toolbarPos').value;
+            var size = document.getElementById('toolbarSize').value; // Get size
+
+            // Update CSS Variable for Scale
+            document.documentElement.style.setProperty('--toolbar-scale', size);
+
+            // Remove existing control if it exists
+            if (drawControl) {
+                map.removeControl(drawControl);
+                drawControl = null;
+            }
+
+            if (show) {
+                drawControl = new L.Control.Draw({
+                    position: pos,
+                    draw: {
+                        // --- ENABLED ALL TOOLS ---
+                        polyline: { shapeOptions: { color: '#00d2d3', weight: 3 } }, 
+                        marker: { icon: customMarkerIcon },
+                        circle: {
+                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                        },
+                        circlemarker: { shapeOptions: { color: '#00d2d3', opacity: 1, fillOpacity: 0.5 } },
+                        polygon: {
+                            allowIntersection: false, showArea: true,
+                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                        },
+                        rectangle: {
+                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                        }
+                    },
+                    edit: { featureGroup: drawnItems, remove: true }
+                });
+                map.addControl(drawControl);
+            }
+        }
+        
+        // Initialize Toolbar
+        updateToolbarSettings();
+
+        // 4. State Management
+        var currentLayer = null;
+        var layerToDelete = null; // Track what to delete
+        var layerCounter = 1;
+
+        // --- Section Toggle Logic ---
+        function toggleSection(contentId, headerEl) {
+            var content = document.getElementById(contentId);
+            content.classList.toggle('collapsed');
+            headerEl.classList.toggle('collapsed');
+        }
+
+        // --- RESIZABLE SIDEBAR LOGIC ---
+        const sidebar = document.getElementById('mainSidebar');
+        const resizer = document.getElementById('sidebarResizer');
+        
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizer.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            sidebar.style.transition = 'none'; 
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            let newWidth = e.clientX;
+            if (newWidth < 220) newWidth = 220;
+            if (newWidth > window.innerWidth * 0.8) newWidth = window.innerWidth * 0.8;
+            document.documentElement.style.setProperty('--sidebar-width', newWidth + 'px');
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizer.classList.remove('resizing');
+                document.body.style.cursor = 'default';
+                sidebar.style.transition = 'margin-left 0.3s ease'; 
+                map.invalidateSize();
+            }
+        });
+
+        // --- Sidebar Toggle Logic ---
+        function toggleSidebar() {
+            var sidebar = document.getElementById('mainSidebar');
+            sidebar.classList.toggle('collapsed');
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 350); 
+        }
+
+        // --- AUTO-SAVE LOGIC ---
+        function saveData() {
+            var data = drawnItems.toGeoJSON();
+            localStorage.setItem('kamal_boundaries', JSON.stringify(data));
+            localStorage.setItem('kamal_counter', layerCounter);
+        }
+
+        function loadData() {
+            var savedData = localStorage.getItem('kamal_boundaries');
+            var savedCounter = localStorage.getItem('kamal_counter');
+            
+            if (savedCounter) layerCounter = parseInt(savedCounter);
+
+            if (savedData) {
+                var geojson = JSON.parse(savedData);
+                L.geoJSON(geojson, {
+                    onEachFeature: function(feature, layer) {
+                        layer.feature = layer.feature || feature;
+                        
+                        if (feature.geometry.type !== 'Point') {
+                            if(layer.setStyle) layer.setStyle({ color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 });
+                        } else {
+                            layer.setIcon(customMarkerIcon);
+                        }
+
+                        layer.on('click', function() { openModal(layer); });
+                        
+                        var tooltipOffset = (feature.geometry.type === 'Point') ? [0, -12] : [0, 0];
+                        if(feature.properties && feature.properties.name) {
+                            layer.bindTooltip(feature.properties.name, { direction: 'top', offset: tooltipOffset });
+                        }
+
+                        drawnItems.addLayer(layer);
+                    }
+                });
+                updateSidePanel();
+            }
+        }
+
+        // Helper functions
+        function createCirclePolygon(circle) {
+            var center = circle.getLatLng();
+            var radius = circle.getRadius();
+            var points = [];
+            for (var i = 0; i < 360; i += 6) { 
+                var radian = i * (Math.PI / 180);
+                var latOffset = (radius * Math.cos(radian)) / 111111;
+                var lngOffset = (radius * Math.sin(radian)) / (111111 * Math.cos(center.lat * (Math.PI / 180)));
+                points.push([center.lat + latOffset, center.lng + lngOffset]);
+            }
+            return L.polygon(points, circle.options);
+        }
+
+        function calculateStats(layer) {
+            try {
+                if(layer instanceof L.Marker) return { area: 0, perimeter: 0, isPoint: true };
+                var geojson = layer.toGeoJSON();
+                var areaSqMeters = turf.area(geojson).toFixed(2);
+                var lengthKm = turf.length(geojson, {units: 'kilometers'});
+                var perimeterMeters = (lengthKm * 1000).toFixed(2);
+                return { areaSqMeters: areaSqMeters, perimeterMeters: perimeterMeters, isPoint: false };
+            } catch(e) {
+                return { areaSqMeters: 0, perimeterMeters: 0, isPoint: true };
+            }
+        }
+
+        function updateSidePanel() {
+            var listContainer = document.getElementById('boundaryList');
+            var countSpan = document.getElementById('fieldCount');
+            listContainer.innerHTML = '';
+            var layers = drawnItems.getLayers();
+            countSpan.textContent = layers.length;
+
+            if(layers.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-gray-500 text-[10px] mt-8"><i class="fa-regular fa-map mb-2 text-xl opacity-50"></i><br>Start drawing on the map</div>';
+                return;
+            }
+
+            layers.forEach(function(layer) {
+                var props = layer.feature.properties;
+                var layerId = L.stamp(layer);
+                var stats = calculateStats(layer);
+                var statsHtml = !stats.isPoint ? 
+                    `<div class="boundary-stats">${stats.areaSqMeters} m² | ${stats.perimeterMeters} m</div>` : 
+                    `<div class="boundary-stats">Marker</div>`;
+
+                var div = document.createElement('div');
+                div.className = 'boundary-item';
+                div.innerHTML = `
+                    <div class="boundary-info" onclick="zoomToLayer(${layerId})">
+                        <div class="boundary-name">${props.name}</div>
+                        <div class="boundary-meta">${props.description ? props.description.substring(0, 15) + '...' : 'No notes'}</div>
+                        ${statsHtml}
+                    </div>
+                    <div class="boundary-actions">
+                        <button class="icon-btn" onclick="openModalById(${layerId})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button class="icon-btn delete" onclick="openDeleteConfirm(${layerId})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                div.addEventListener('mouseenter', function() { layer.setStyle({ weight: 5, fillOpacity: 0.3 }); });
+                div.addEventListener('mouseleave', function() { layer.setStyle({ weight: 3, fillOpacity: 0.1 }); });
+                listContainer.appendChild(div);
+            });
+        }
+
+        // KML Upload
+        function handleFileUpload(input) {
+            var file = input.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var kmlText = e.target.result;
+                    var parser = new DOMParser();
+                    var kmlDom = parser.parseFromString(kmlText, 'text/xml');
+                    var geojson = toGeoJSON.kml(kmlDom);
+
+                    if (geojson.features.length === 0) { showToast("⚠️ No valid features"); return; }
+
+                    L.geoJSON(geojson, {
+                        onEachFeature: function(feature, layer) {
+                            layer.feature = layer.feature || {};
+                            layer.feature.type = "Feature";
+                            layer.feature.properties = feature.properties || {};
+                            
+                            if (!layer.feature.properties.name) layer.feature.properties.name = "Imported " + layerCounter++;
+                            if (!layer.feature.properties.description) layer.feature.properties.description = "Imported KML";
+
+                            if (layer.setStyle) layer.setStyle({ color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 });
+                            
+                            layer.on('click', function() { openModal(layer); });
+                            var tooltipOffset = (feature.geometry.type === 'Point') ? [0, -12] : [0, 0];
+                            layer.bindTooltip(layer.feature.properties.name, { direction: 'top', offset: tooltipOffset });
+                            drawnItems.addLayer(layer);
+                        }
+                    });
+
+                    if (drawnItems.getBounds().isValid()) map.fitBounds(drawnItems.getBounds());
+                    updateSidePanel();
+                    saveData(); 
+                    showToast("✅ KML Imported");
+                } catch (error) { console.error(error); showToast("❌ Error parsing KML"); }
+                input.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        window.zoomToLayer = function(id) {
+            var layer = drawnItems.getLayer(id);
+            if(layer) {
+                if(layer.getBounds) map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                else if(layer.getLatLng) { map.flyTo(layer.getLatLng(), 16); layer.openPopup(); }
+            }
+        };
+
+        window.openModalById = function(id) {
+            var layer = drawnItems.getLayer(id);
+            if(layer) openModal(layer);
+        };
+
+        // UI Logic
+        function openModal(layer) {
+            currentLayer = layer;
+            var props = currentLayer.feature.properties;
+            document.getElementById('kmlName').value = props.name || "";
+            document.getElementById('kmlDesc').value = props.description || "";
+            
+            var stats = calculateStats(layer);
+            var statsDiv = document.getElementById('modalStats');
+            if(stats.isPoint) {
+                statsDiv.classList.add('hidden');
+            } else {
+                statsDiv.classList.remove('hidden');
+                document.getElementById('statArea').textContent = stats.areaSqMeters;
+                document.getElementById('statPerimeter').textContent = stats.perimeterMeters;
+            }
+            document.getElementById('propModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('propModal').style.display = 'none';
+            if(document.getElementById('confirmModal').style.display === 'none') {
+               currentLayer = null;
+            }
+        }
+
+        // --- Custom Delete Modal Logic ---
+        window.openDeleteConfirm = function(id) {
+            layerToDelete = drawnItems.getLayer(id);
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        window.triggerDeleteInModal = function() {
+            if (currentLayer) {
+                layerToDelete = currentLayer;
+                document.getElementById('confirmModal').style.display = 'flex';
+            }
+        }
+
+        window.closeConfirmModal = function() {
+            document.getElementById('confirmModal').style.display = 'none';
+            layerToDelete = null;
+        }
+
+        window.confirmDeleteAction = function() {
+            if (layerToDelete) {
+                drawnItems.removeLayer(layerToDelete);
+                updateSidePanel();
+                saveData();
+                showToast("Boundary Deleted");
+                
+                document.getElementById('confirmModal').style.display = 'none';
+                document.getElementById('propModal').style.display = 'none';
+                
+                layerToDelete = null;
+                currentLayer = null;
+            }
+        }
+
+        function saveProperties() {
+            if (currentLayer) {
+                var name = document.getElementById('kmlName').value;
+                var desc = document.getElementById('kmlDesc').value;
+                currentLayer.feature.properties.name = name;
+                currentLayer.feature.properties.description = desc;
+                
+                var isMarker = currentLayer instanceof L.Marker;
+                var offset = isMarker ? [0, -12] : [0, 0];
+                currentLayer.bindTooltip(name, { direction: 'top', offset: offset }).openTooltip();
+                
+                updateSidePanel(); 
+                saveData(); 
+                showToast("Properties Saved");
+                closeModal();
+                currentLayer = null;
+            }
+        }
+
+        map.on('mousemove', function(e) {
+            document.getElementById('coords').innerHTML = "Lat: " + e.latlng.lat.toFixed(4) + ", Lng: " + e.latlng.lng.toFixed(4);
+        });
+
+        function showToast(message) {
+            var toast = document.getElementById('statusToast');
+            var msgSpan = document.getElementById('toastMsg');
+            msgSpan.textContent = message;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => { toast.classList.add('opacity-0'); }, 3000);
+        }
+
+        // --- NEW MAP LOCK FEATURE ---
+        function toggleMapLock() {
+            var isLocked = document.getElementById('lockMap').checked;
+            if (isLocked) {
+                map.dragging.disable();
+                map.touchZoom.disable();
+                map.doubleClickZoom.disable();
+                map.scrollWheelZoom.disable();
+                map.boxZoom.disable();
+                map.keyboard.disable();
+                if (map.tap) map.tap.disable();
+                document.getElementById('map').style.cursor = 'default';
+                showToast("Map Locked");
+            } else {
+                map.dragging.enable();
+                map.touchZoom.enable();
+                map.doubleClickZoom.enable();
+                map.scrollWheelZoom.enable();
+                map.boxZoom.enable();
+                map.keyboard.enable();
+                if (map.tap) map.tap.enable();
+                document.getElementById('map').style.cursor = 'grab';
+                showToast("Map Unlocked");
+            }
+        }
+
+        // --- Search Logic ---
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            const inputVal = document.getElementById('searchCoords').value.trim();
+            if(!inputVal) return;
+
+            const coordRegex = /^-?\d+(\.\d+)?\s*[,\s]\s*-?\d+(\.\d+)?$/;
+            
+            if (coordRegex.test(inputVal)) {
+                // Handle as coordinates
+                const parts = inputVal.split(/[\s,]+/);
+                const lat = parseFloat(parts[0]);
+                const lng = parseFloat(parts[1]);
+                
+                if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90) { showToast("Invalid coordinates"); return; }
+
+                map.flyTo([lat, lng], 16, { duration: 1.5 });
+                createSearchResultMarker(lat, lng, "Search Result");
+                showToast("Moved to coordinates");
+            } else {
+                // Handle as Place Name (Nominatim API)
+                var btn = this;
+                var originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+                btn.disabled = true;
+
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(inputVal)}&limit=1`;
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        btn.innerHTML = originalIcon;
+                        btn.disabled = false;
+
+                        if (data && data.length > 0) {
+                            const lat = parseFloat(data[0].lat);
+                            const lon = parseFloat(data[0].lon);
+                            const displayName = data[0].display_name.split(',')[0]; 
+
+                            map.flyTo([lat, lon], 16, { duration: 1.5 });
+                            createSearchResultMarker(lat, lon, displayName);
+                            showToast("Found: " + displayName);
+                        } else {
+                            showToast("❌ Location not found");
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        btn.innerHTML = originalIcon;
+                        btn.disabled = false;
+                        showToast("❌ Network error");
+                    });
+            }
+        });
+        
+        document.getElementById('searchCoords').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchBtn').click();
+            }
+        });
+
+        function createSearchResultMarker(lat, lng, title) {
+            L.marker([lat, lng], { icon: customMarkerIcon }).addTo(map)
+                .bindPopup(`<b>${title}</b><br>${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                .openPopup();
+        }
+
+        // --- GPS Logic ---
+        document.getElementById('locateBtn').addEventListener('click', function() {
+            if (!navigator.geolocation) { showToast("Geolocation not supported"); return; }
+
+            var btn = this;
+            var originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Finding...';
+            btn.classList.add('opacity-70');
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+                    var acc = position.coords.accuracy;
+
+                    map.flyTo([lat, lng], 18);
+                    
+                    L.marker([lat, lng], { icon: customMarkerIcon }).addTo(map)
+                        .bindPopup(`<b>You Are Here</b><br>Accuracy: ${Math.round(acc)}m`)
+                        .openPopup();
+
+                    L.circle([lat, lng], { radius: acc, color: '#00d2d3', fillOpacity: 0.1, weight: 1 }).addTo(map);
+                        
+                    showToast(`Location Found`);
+                    btn.innerHTML = originalContent;
+                    btn.classList.remove('opacity-70');
+                },
+                function(error) {
+                    showToast("GPS Error: " + error.message);
+                    btn.innerHTML = originalContent;
+                    btn.classList.remove('opacity-70');
+                },
+                { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+            );
+        });
+
+        // Helper to restart a draw tool
+        function startDrawTool(type) {
+            // We use the same options defined in drawControl
+            var options = drawControl.options.draw;
+            
+            if(type === 'polygon') new L.Draw.Polygon(map, options.polygon).enable();
+            else if(type === 'rectangle') new L.Draw.Rectangle(map, options.rectangle).enable();
+            else if(type === 'circle') new L.Draw.Circle(map, options.circle).enable();
+            else if(type === 'marker') new L.Draw.Marker(map, options.marker).enable();
+            else if(type === 'polyline') new L.Draw.Polyline(map, options.polyline).enable();
+            else if(type === 'circlemarker') new L.Draw.CircleMarker(map, options.circlemarker).enable();
+        }
+
+        // Draw Events
+        map.on(L.Draw.Event.CREATED, function (e) {
+            var layer = e.layer;
+            var type = e.layerType;
+
+            if (type === 'circle') {
+                layer = createCirclePolygon(layer);
+                type = 'polygon';
+            }
+
+            layer.feature = layer.feature || {};
+            layer.feature.type = "Feature";
+            
+            var geojson = layer.toGeoJSON();
+            var typeName = (type === 'marker') ? "Point " : "Field ";
+            var description = "";
+
+            // --- Updated Logic to Calculate Geometry Details in m2 ---
+            if (type === 'marker') {
+                 var latlng = layer.getLatLng();
+                 description = `Centroid is ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+            } else {
+                 try {
+                     var areaSqMeters = turf.area(geojson).toFixed(2);
+                     var lengthKm = turf.length(geojson, {units: 'kilometers'});
+                     var perimeterM = (lengthKm * 1000).toFixed(2);
+                     
+                     // Centroid
+                     var center = turf.centroid(geojson);
+                     var cLat = center.geometry.coordinates[1].toFixed(5);
+                     var cLng = center.geometry.coordinates[0].toFixed(5);
+
+                     description = `Area is ${areaSqMeters} m², Perimeter is ${perimeterM} m, Centroid is ${cLat}, ${cLng}`;
+                 } catch (err) {
+                     description = "Created on " + new Date().toLocaleDateString();
+                 }
+            }
+
+            layer.feature.properties = {
+                name: typeName + layerCounter,
+                description: description
+            };
+            layerCounter++;
+
+            layer.on('click', function() { openModal(layer); });
+            var tooltipOffset = (type === 'marker') ? [0, -12] : [0, 0];
+            layer.bindTooltip(layer.feature.properties.name, { direction: 'top', offset: tooltipOffset });
+
+            drawnItems.addLayer(layer);
+            updateSidePanel(); 
+            saveData(); 
+            showToast("Added to list");
+
+            // --- Check Continuous Mode ---
+            if (document.getElementById('continuousMode').checked) {
+                // Short timeout to let the previous event finish cleanly
+                setTimeout(function() {
+                    startDrawTool(e.layerType);
+                }, 100);
+            }
+        });
+
+        map.on(L.Draw.Event.DELETED, function (e) {
+            updateSidePanel();
+            saveData();
+            showToast("Boundary removed");
+        });
+
+        map.on(L.Draw.Event.EDITED, function (e) {
+            updateSidePanel();
+            saveData();
+            showToast("Changes Saved");
+        });
+
+        // Download Logic
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            var features = [];
+            drawnItems.eachLayer(function(layer) {
+                var geojson = layer.toGeoJSON();
+                if (layer.feature && layer.feature.properties) {
+                    geojson.properties = JSON.parse(JSON.stringify(layer.feature.properties));
+                }
+                
+                if (geojson.geometry.type === 'Polygon' || geojson.geometry.type === 'MultiPolygon') {
+                    geojson.properties['stroke'] = '#ff0000';
+                    geojson.properties['stroke-width'] = 2;
+                    geojson.properties['stroke-opacity'] = 1;
+                    geojson.properties['fill'] = '#ffffff';
+                    geojson.properties['fill-opacity'] = 0;
+                }
+                features.push(geojson);
+            });
+
+            if (features.length === 0) { showToast("List is empty"); return; }
+
+            var fileNameInput = document.getElementById('kmlFileName').value.trim();
+            var fileName = fileNameInput || "My_Boundaries"; 
+            fileName = fileName.replace(/[^a-z0-9_\-]/gi, '_');
+
+            var data = { "type": "FeatureCollection", "features": features };
+            var kml = tokml(data, { simplestyle: true, name: 'name', description: 'description' });
+
+            var blob = new Blob([kml], {type: "application/vnd.google-earth.kml+xml"});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = fileName + ".kml";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showToast("Downloaded " + fileName + ".kml");
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            if(Object.keys(drawnItems._layers).length === 0) return;
+            if(confirm("Clear all boundaries? This cannot be undone.")) {
+                drawnItems.clearLayers();
+                layerCounter = 1;
+                localStorage.removeItem('kamal_boundaries');
+                localStorage.removeItem('kamal_counter');
+                updateSidePanel();
+                showToast("All cleared");
+            }
+        });
+
+        loadData();
+    </script>
+</body>
+</html>
