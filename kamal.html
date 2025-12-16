@@ -1277,7 +1277,7 @@
             if (features.length === 0) { showToast("List is empty"); return; }
 
             var fileNameInput = document.getElementById('kmlFileName').value.trim();
-            var fileName = fileNameInput || "My_Boundaries"; 
+            var fileName = fileNameInput || "Field"; 
             fileName = fileName.replace(/[^a-z0-9_\-]/gi, '_');
 
             var data = { "type": "FeatureCollection", "features": features };
