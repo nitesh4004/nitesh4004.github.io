@@ -257,6 +257,15 @@
             background: #253346;
         }
         
+        /* New class for hidden items */
+        .boundary-item.item-hidden {
+            opacity: 0.5;
+            border-style: dashed;
+        }
+        .boundary-item.item-hidden::before {
+            background-color: #64748b;
+        }
+        
         .boundary-info { flex: 1; cursor: pointer; }
         .boundary-name { font-size: 12px; font-weight: 600; color: #f8fafc; }
         .boundary-meta { font-size: 10px; color: #94a3b8; margin-top: 2px; }
@@ -281,9 +290,12 @@
             color: #94a3b8;
             transition: all 0.2s;
             font-size: 11px;
+            margin-left: 2px;
         }
         .icon-btn:hover { background: rgba(255,255,255,0.1); color: white; }
         .icon-btn.delete:hover { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .icon-btn.eye:hover { background: rgba(0, 210, 211, 0.1); color: #00d2d3; }
+        .icon-btn.eye.active { color: #00d2d3; }
 
         /* Map Area */
         .main-content {
@@ -524,7 +536,6 @@
                             <i class="fa-solid fa-expand text-cyan-500"></i> Size
                         </label>
                         <div class="flex items-center gap-2 w-20">
-                            <!-- UPDATED MAX VALUE AND DEFAULT VALUE FOR DOUBLED SIZE -->
                             <input type="range" id="toolbarSize" min="0.5" max="3.0" step="0.1" value="1.25" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-cyan-500" oninput="updateToolbarSettings()">
                         </div>
                     </div>
@@ -662,7 +673,7 @@
             attribution: 'Map data &copy; Google'
         });
 
-        // Esri Satellite (Adding back as an option)
+        // Esri Satellite
         var esriUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
         var esriLayer = L.tileLayer(esriUrl, { attribution: 'Tiles © Esri', maxZoom: 19 });
 
@@ -809,16 +820,26 @@
                     onEachFeature: function(feature, layer) {
                         layer.feature = layer.feature || feature;
                         
+                        // Default visible property if missing
+                        if (typeof layer.feature.properties.visible === 'undefined') {
+                            layer.feature.properties.visible = true;
+                        }
+
                         if (feature.geometry.type !== 'Point') {
                             if(layer.setStyle) layer.setStyle({ color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 });
                         } else {
                             layer.setIcon(customMarkerIcon);
                         }
+                        
+                        // Apply hidden state if saved as false
+                        if(layer.feature.properties.visible === false) {
+                            applyVisibilityState(layer, false);
+                        }
 
                         layer.on('click', function() { openModal(layer); });
                         
                         var tooltipOffset = (feature.geometry.type === 'Point') ? [0, -12] : [0, 0];
-                        if(feature.properties && feature.properties.name) {
+                        if(feature.properties && feature.properties.name && layer.feature.properties.visible !== false) {
                             layer.bindTooltip(feature.properties.name, { direction: 'top', offset: tooltipOffset });
                         }
 
@@ -872,28 +893,88 @@
                 var props = layer.feature.properties;
                 var layerId = L.stamp(layer);
                 var stats = calculateStats(layer);
+                var isVisible = (props.visible !== false); // Default true
+                
                 var statsHtml = !stats.isPoint ? 
                     `<div class="boundary-stats">${stats.areaSqMeters} m² | ${stats.perimeterMeters} m</div>` : 
                     `<div class="boundary-stats">Marker</div>`;
 
+                var eyeIcon = isVisible ? 'fa-eye' : 'fa-eye-slash';
+                var itemClass = isVisible ? 'boundary-item' : 'boundary-item item-hidden';
+                var activeClass = isVisible ? 'active' : '';
+
                 var div = document.createElement('div');
-                div.className = 'boundary-item';
+                div.className = itemClass;
                 div.innerHTML = `
                     <div class="boundary-info" onclick="zoomToLayer(${layerId})">
                         <div class="boundary-name">${props.name}</div>
                         <div class="boundary-meta">${props.description ? props.description.substring(0, 15) + '...' : 'No notes'}</div>
                         ${statsHtml}
                     </div>
-                    <div class="boundary-actions">
+                    <div class="boundary-actions flex">
+                         <button class="icon-btn eye ${activeClass}" onclick="toggleVisibility(${layerId})" title="Toggle Visibility"><i class="fa-solid ${eyeIcon}"></i></button>
                         <button class="icon-btn" onclick="openModalById(${layerId})" title="Edit"><i class="fa-solid fa-pen"></i></button>
                         <button class="icon-btn" onclick="downloadSingleLayer(${layerId})" title="Download KML"><i class="fa-solid fa-file-arrow-down"></i></button>
                         <button class="icon-btn delete" onclick="openDeleteConfirm(${layerId})" title="Delete"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `;
-                div.addEventListener('mouseenter', function() { layer.setStyle({ weight: 5, fillOpacity: 0.3 }); });
-                div.addEventListener('mouseleave', function() { layer.setStyle({ weight: 3, fillOpacity: 0.1 }); });
+                
+                if(isVisible) {
+                    div.addEventListener('mouseenter', function() { layer.setStyle({ weight: 5, fillOpacity: 0.3 }); });
+                    div.addEventListener('mouseleave', function() { layer.setStyle({ weight: 3, fillOpacity: 0.1 }); });
+                }
+                
                 listContainer.appendChild(div);
             });
+        }
+
+        // --- VISIBILITY TOGGLE LOGIC ---
+        window.toggleVisibility = function(id) {
+            var layer = drawnItems.getLayer(id);
+            if(!layer) return;
+
+            var isCurrentlyVisible = (layer.feature.properties.visible !== false);
+            var newState = !isCurrentlyVisible;
+
+            // Update property
+            layer.feature.properties.visible = newState;
+
+            // Apply visual changes
+            applyVisibilityState(layer, newState);
+
+            // Save and update UI
+            saveData();
+            updateSidePanel();
+            showToast(newState ? "Field Visible" : "Field Hidden");
+        }
+
+        function applyVisibilityState(layer, isVisible) {
+            if(isVisible) {
+                // Show
+                if (layer instanceof L.Marker) {
+                    layer.setOpacity(1);
+                    layer.setZIndexOffset(0);
+                } else {
+                    layer.setStyle({ opacity: 1, fillOpacity: 0.1, stroke: true, interactive: true });
+                }
+                
+                if (layer.feature.properties.name) {
+                    layer.bindTooltip(layer.feature.properties.name, { 
+                        direction: 'top', 
+                        offset: (layer instanceof L.Marker) ? [0, -12] : [0, 0] 
+                    });
+                }
+            } else {
+                // Hide
+                if (layer instanceof L.Marker) {
+                    layer.setOpacity(0);
+                    layer.setZIndexOffset(-1000); // Send to back
+                } else {
+                    layer.setStyle({ opacity: 0, fillOpacity: 0, stroke: false, interactive: false });
+                }
+                layer.unbindTooltip();
+                layer.closePopup();
+            }
         }
 
         // KML Upload
@@ -916,6 +997,7 @@
                             layer.feature = layer.feature || {};
                             layer.feature.type = "Feature";
                             layer.feature.properties = feature.properties || {};
+                            layer.feature.properties.visible = true; // Default visible on import
                             
                             if (!layer.feature.properties.name) layer.feature.properties.name = "Imported " + layerCounter++;
                             if (!layer.feature.properties.description) layer.feature.properties.description = "Imported KML";
@@ -941,9 +1023,11 @@
 
         window.zoomToLayer = function(id) {
             var layer = drawnItems.getLayer(id);
-            if(layer) {
+            if(layer && layer.feature.properties.visible !== false) {
                 if(layer.getBounds) map.fitBounds(layer.getBounds(), { padding: [50, 50] });
                 else if(layer.getLatLng) { map.flyTo(layer.getLatLng(), 16); layer.openPopup(); }
+            } else if (layer) {
+                showToast("Cannot zoom to hidden field");
             }
         };
 
@@ -961,6 +1045,7 @@
             // Preserve properties
             if (layer.feature && layer.feature.properties) {
                 geojson.properties = JSON.parse(JSON.stringify(layer.feature.properties));
+                delete geojson.properties.visible; // Don't export internal flag
             }
 
             // Apply styles for KML
@@ -994,6 +1079,8 @@
 
         // UI Logic
         function openModal(layer) {
+            if(layer.feature.properties.visible === false) return; // Don't open if hidden
+
             currentLayer = layer;
             var props = currentLayer.feature.properties;
             document.getElementById('kmlName').value = props.name || "";
@@ -1263,7 +1350,8 @@
 
             layer.feature.properties = {
                 name: typeName + layerCounter,
-                description: description
+                description: description,
+                visible: true // Default to visible
             };
             layerCounter++;
 
@@ -1278,7 +1366,6 @@
 
             // --- Check Continuous Mode ---
             if (document.getElementById('continuousMode').checked) {
-                // Short timeout to let the previous event finish cleanly
                 setTimeout(function() {
                     startDrawTool(e.layerType);
                 }, 100);
@@ -1304,6 +1391,7 @@
                 var geojson = layer.toGeoJSON();
                 if (layer.feature && layer.feature.properties) {
                     geojson.properties = JSON.parse(JSON.stringify(layer.feature.properties));
+                    delete geojson.properties.visible; // Remove internal flag
                 }
                 
                 if (geojson.geometry.type === 'Polygon' || geojson.geometry.type === 'MultiPolygon') {
