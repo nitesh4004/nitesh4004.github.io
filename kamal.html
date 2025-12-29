@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KaMaL - KML Boundary Maker (Compact UI)</title>
+    <title>KaMaL - KML Boundary Maker (High Zoom)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -370,6 +370,29 @@
             align-items: center;
             justify-content: center;
         }
+        
+        /* --- ADJUSTABLE PROPERTY MODAL OVERRIDES --- */
+        #propModal {
+            background: transparent !important; /* Remove dark overlay */
+            backdrop-filter: none !important;
+            pointer-events: none; /* Allow clicking map behind */
+            display: none; /* Hidden by default */
+            /* Remove flex centering to allow absolute dragging */
+            align-items: unset; 
+            justify-content: unset;
+        }
+
+        #propModal .modal-content {
+            pointer-events: auto; /* Enable interaction with the box */
+            position: absolute; /* Allow moving */
+            top: 100px; /* Initial position */
+            left: calc(50% - 190px); /* Center horizontally (380px/2) */
+            margin: 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.15);
+            /* Reset styling that might conflict with dragging */
+        }
+        
         /* Higher Z-Index for Confirm Modal so it appears above Properties Modal */
         #confirmModal { z-index: 5000; }
         
@@ -382,7 +405,16 @@
             border: 1px solid rgba(255,255,255,0.1);
             color: white;
         }
-        .modal-header { font-size: 15px; font-weight: 700; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px; color: #f1f5f9; }
+        
+        .modal-header { 
+            font-size: 15px; 
+            font-weight: 700; 
+            border-bottom: 1px solid #334155; 
+            padding-bottom: 10px; 
+            margin-bottom: 15px; 
+            color: #f1f5f9;
+            cursor: move; /* SHOW MOVE CURSOR */
+        }
         
         .form-label { color: #94a3b8; font-size: 10px; font-weight: 600; margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
         .form-input {
@@ -482,7 +514,7 @@
                 </div>
                 
                 <div class="flex gap-2">
-                     <button id="locateBtn" class="action-btn btn-dark" style="margin-top:0; flex: 1;">
+                      <button id="locateBtn" class="action-btn btn-dark" style="margin-top:0; flex: 1;">
                         <i class="fa-solid fa-location-crosshairs"></i> Use My GPS
                     </button>
                 </div>
@@ -600,10 +632,11 @@
         <div class="coord-box" id="coords">00.0000, 00.0000</div>
     </div>
 
+    <!-- Modified Draggable Property Modal -->
     <div id="propModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <span>Field Properties</span>
+                <span><i class="fa-solid fa-grip-lines mr-2 text-gray-500"></i>Field Properties</span>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-white float-right"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
@@ -673,19 +706,31 @@
     <script src="https://unpkg.com/tokml@0.4.0/tokml.js"></script>
 
     <script>
-        // 1. Initialize Map
-        var map = L.map('map', { zoomControl: false }).setView([20.5937, 78.9629], 5);
+        // 1. Initialize Map with High Zoom Capabilities
+        // maxZoom 23 allows us to digitally zoom past the available tiles
+        var map = L.map('map', { 
+            zoomControl: false,
+            maxZoom: 23 // Increased from default 18
+        }).setView([20.5937, 78.9629], 5);
+        
         L.control.zoom({ position: 'topright' }).addTo(map);
 
         // 2. Layers
+        // IMPORTANT: maxNativeZoom tells Leaflet "Don't look for tiles after this level, just stretch the old ones"
+        
         // OpenStreetMap
         var osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        var osmLayer = L.tileLayer(osmUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 19 });
+        var osmLayer = L.tileLayer(osmUrl, { 
+            attribution: '© OpenStreetMap contributors', 
+            maxZoom: 23, 
+            maxNativeZoom: 19 
+        });
 
         // Google Hybrid
         var googleHybridUrl = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
         var googleHybridLayer = L.tileLayer(googleHybridUrl, {
-            maxZoom: 20,
+            maxZoom: 23,
+            maxNativeZoom: 20, // Google tiles usually exist up to 20 or 21
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             attribution: 'Map data &copy; Google'
         });
@@ -693,7 +738,8 @@
         // Google Streets
         var googleStreetsUrl = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
         var googleStreetsLayer = L.tileLayer(googleStreetsUrl, {
-            maxZoom: 20,
+            maxZoom: 23,
+            maxNativeZoom: 20,
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             attribution: 'Map data &copy; Google'
         });
@@ -701,14 +747,19 @@
         // Google Terrain
         var googleTerrainUrl = 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}';
         var googleTerrainLayer = L.tileLayer(googleTerrainUrl, {
-            maxZoom: 20,
+            maxZoom: 23,
+            maxNativeZoom: 20,
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             attribution: 'Map data &copy; Google'
         });
 
         // Esri Satellite
         var esriUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-        var esriLayer = L.tileLayer(esriUrl, { attribution: 'Tiles © Esri', maxZoom: 19 });
+        var esriLayer = L.tileLayer(esriUrl, { 
+            attribution: 'Tiles © Esri', 
+            maxZoom: 23,
+            maxNativeZoom: 19
+        });
 
         // Set default layer
         googleHybridLayer.addTo(map);
@@ -1144,7 +1195,54 @@
                 document.getElementById('statArea').textContent = stats.areaSqMeters;
                 document.getElementById('statPerimeter').textContent = stats.perimeterMeters;
             }
-            document.getElementById('propModal').style.display = 'flex';
+            document.getElementById('propModal').style.display = 'block';
+            
+            // Re-initialize drag functionality each time (safe to call repeatedly)
+            makeDraggable(document.querySelector('#propModal .modal-content'));
+        }
+        
+        // --- NEW: DRAGGABLE LOGIC ---
+        function makeDraggable(elmnt) {
+            var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            var header = elmnt.querySelector(".modal-header");
+            
+            if (header) {
+                // if present, the header is where you move the DIV from:
+                header.onmousedown = dragMouseDown;
+            } else {
+                // otherwise, move the DIV from anywhere inside the DIV:
+                elmnt.onmousedown = dragMouseDown;
+            }
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                // get the mouse cursor position at startup:
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                // call a function whenever the cursor moves:
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                // calculate the new cursor position:
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                // set the element's new position:
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                // stop moving when mouse button is released:
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
         }
 
         // --- NEW: SMOOTHING LOGIC (BEZIER SPLINE) ---
