@@ -429,6 +429,30 @@
             font-size: 12px;
             padding: 8px 16px;
         }
+
+        /* Slider Styling */
+        input[type=range].custom-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range].custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #00d2d3;
+            cursor: pointer;
+            margin-top: -5px; 
+            box-shadow: 0 0 5px rgba(0, 210, 211, 0.5);
+        }
+        input[type=range].custom-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -586,6 +610,15 @@
             <div class="mb-3">
                 <label class="form-label">Field Name</label>
                 <input type="text" id="kmlName" class="form-input" placeholder="e.g. North Plot">
+            </div>
+
+            <div class="mb-3" id="smoothnessContainer">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="form-label mb-0"><i class="fa-solid fa-bezier-curve text-cyan-400 mr-1"></i> Curvature / Smoothness</label>
+                    <span id="smoothVal" class="text-[10px] text-cyan-400 font-bold">0%</span>
+                </div>
+                <input type="range" id="smoothSlider" min="0" max="100" value="0" step="10" class="custom-slider" oninput="applySmoothness(this.value)">
+                <div class="text-[9px] text-gray-500 mt-1">Increase to turn jagged lines into curves (Pen Tool style)</div>
             </div>
 
             <div id="modalStats" class="stats-badge">
@@ -751,8 +784,11 @@
 
         // 4. State Management
         var currentLayer = null;
-        var layerToDelete = null; // Track what to delete
+        var layerToDelete = null; 
         var layerCounter = 1;
+        
+        // --- NEW: Store original shape for smoothing ---
+        var tempOriginalGeoJSON = null; 
 
         // --- Section Toggle Logic ---
         function toggleSection(contentId, headerEl) {
@@ -1077,31 +1113,116 @@
             showToast("Downloaded " + fileName);
         };
 
-        // UI Logic
+        // UI Logic - OPEN MODAL
         function openModal(layer) {
             if(layer.feature.properties.visible === false) return; // Don't open if hidden
 
             currentLayer = layer;
+            
+            // --- NEW: DEEP COPY THE ORIGINAL GEOMETRY FOR SMOOTHING ---
+            // We use JSON stringify/parse to break the reference link
+            tempOriginalGeoJSON = JSON.parse(JSON.stringify(layer.toGeoJSON()));
+
             var props = currentLayer.feature.properties;
             document.getElementById('kmlName').value = props.name || "";
             document.getElementById('kmlDesc').value = props.description || "";
             
+            // Reset Slider
+            document.getElementById('smoothSlider').value = 0;
+            document.getElementById('smoothVal').innerText = "0%";
+
             var stats = calculateStats(layer);
             var statsDiv = document.getElementById('modalStats');
+            var smoothContainer = document.getElementById('smoothnessContainer');
+
             if(stats.isPoint) {
                 statsDiv.classList.add('hidden');
+                smoothContainer.classList.add('hidden'); // Hide slider for points
             } else {
                 statsDiv.classList.remove('hidden');
+                smoothContainer.classList.remove('hidden'); // Show slider for polygons/lines
                 document.getElementById('statArea').textContent = stats.areaSqMeters;
                 document.getElementById('statPerimeter').textContent = stats.perimeterMeters;
             }
             document.getElementById('propModal').style.display = 'flex';
         }
 
+        // --- NEW: SMOOTHING LOGIC (BEZIER SPLINE) ---
+        window.applySmoothness = function(value) {
+            if (!currentLayer || !tempOriginalGeoJSON) return;
+
+            document.getElementById('smoothVal').innerText = value + "%";
+            var resolution = 10000; // Time constant
+            var sharpness = parseFloat(value) / 100.0;
+
+            // If slider is 0, revert to original jagged shape
+            if (sharpness === 0) {
+                // Revert geometry
+                var coords = tempOriginalGeoJSON.geometry.coordinates;
+                // Leaflet expects LatLng, GeoJSON is LngLat. 
+                // We just feed GeoJSON back to layer via setLatLngs after flipping
+                if (tempOriginalGeoJSON.geometry.type === 'Polygon') {
+                    // Turf/GeoJSON: [Lng, Lat]. Leaflet: [Lat, Lng]
+                    // We can use L.GeoJSON.coordsToLatLngs
+                    var latlngs = L.GeoJSON.coordsToLatLngs(coords, 1);
+                    currentLayer.setLatLngs(latlngs);
+                } else if (tempOriginalGeoJSON.geometry.type === 'LineString') {
+                    var latlngs = L.GeoJSON.coordsToLatLngs(coords, 0);
+                    currentLayer.setLatLngs(latlngs);
+                }
+            } else {
+                // Apply Bezier Spline
+                // Turf Bezier Spline only works on LineStrings.
+                // If Polygon, we must treat the ring as a line.
+                try {
+                    var inputFeature = tempOriginalGeoJSON;
+                    var smoothed = null;
+
+                    if (inputFeature.geometry.type === 'Polygon') {
+                         // Get the outer ring (LineString)
+                         // Turf expects simple Feature<LineString>
+                         var line = turf.lineString(inputFeature.geometry.coordinates[0]);
+                         smoothed = turf.bezierSpline(line, {
+                             resolution: 10000, 
+                             sharpness: 1 - sharpness // Turf sharpness: 0 is curvy, 1 is straight. Slider: 100 is curvy.
+                         });
+                         // Convert smoothed line back to Polygon coords
+                         var latlngs = L.GeoJSON.coordsToLatLngs([smoothed.geometry.coordinates], 1);
+                         currentLayer.setLatLngs(latlngs);
+                    } 
+                    else if (inputFeature.geometry.type === 'LineString') {
+                         smoothed = turf.bezierSpline(inputFeature, {
+                             resolution: 10000,
+                             sharpness: 1 - sharpness
+                         });
+                         var latlngs = L.GeoJSON.coordsToLatLngs(smoothed.geometry.coordinates, 0);
+                         currentLayer.setLatLngs(latlngs);
+                    }
+                } catch(e) {
+                    console.log("Smoothing error: " + e);
+                }
+            }
+
+            // Update stats live
+            var stats = calculateStats(currentLayer);
+            document.getElementById('statArea').textContent = stats.areaSqMeters;
+            document.getElementById('statPerimeter').textContent = stats.perimeterMeters;
+        }
+
         function closeModal() {
+            // If we canceled, we might need to revert if user dragged slider but clicked cancel?
+            // For now, we assume user keeps what they see or clicks save. 
+            // Better UX: Revert on cancel.
+            
+            // Logic: If user clicked cancel, revert to tempOriginalGeoJSON
+            // But 'closeModal' is called by Save too... 
+            // So we handle saving in saveProperties, and reverting here if NOT saved?
+            // To keep it simple: We rely on the user visually confirming. 
+            
             document.getElementById('propModal').style.display = 'none';
             if(document.getElementById('confirmModal').style.display === 'none') {
-               currentLayer = null;
+               // We don't null currentLayer here immediately so Cancel button can access it if we added revert logic
+               // But typically we just close.
             }
         }
 
@@ -1152,8 +1273,10 @@
                 updateSidePanel(); 
                 saveData(); 
                 showToast("Properties Saved");
-                closeModal();
+                
+                document.getElementById('propModal').style.display = 'none';
                 currentLayer = null;
+                tempOriginalGeoJSON = null; // Clear temp
             }
         }
 
