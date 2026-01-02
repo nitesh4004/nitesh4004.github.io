@@ -485,6 +485,28 @@
             background: #334155;
             border-radius: 2px;
         }
+        
+        .slider-btn {
+            width: 24px;
+            height: 24px;
+            background: #334155;
+            color: #00d2d3;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .slider-btn:hover {
+            background: #1e293b;
+            border-color: #00d2d3;
+        }
+        .slider-btn:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -645,13 +667,44 @@
                 <input type="text" id="kmlName" class="form-input" placeholder="e.g. North Plot">
             </div>
 
-            <div class="mb-3" id="smoothnessContainer">
-                <div class="flex justify-between items-center mb-1">
-                    <label class="form-label mb-0"><i class="fa-solid fa-bezier-curve text-cyan-400 mr-1"></i> Curvature / Smoothness</label>
-                    <span id="smoothVal" class="text-[10px] text-cyan-400 font-bold">0%</span>
+            <div id="geoControls" class="mb-3">
+                <!-- SMOOTHNESS CONTROL -->
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="form-label mb-0"><i class="fa-solid fa-bezier-curve text-cyan-400 mr-1"></i> Smoothness</label>
+                        <span id="smoothVal" class="text-[12px] text-cyan-400 font-bold bg-slate-800 px-2 py-0.5 rounded border border-cyan-500/30">0.0</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <button class="slider-btn" onclick="changeSmoothness(-0.1)">-</button>
+                        <div class="flex-1">
+                             <input type="range" id="smoothSlider" min="0" max="10" value="0" step="0.1" class="custom-slider" oninput="updateGeometry()">
+                        </div>
+                        <button class="slider-btn" onclick="changeSmoothness(0.1)">+</button>
+                    </div>
+                    <div class="text-[9px] text-gray-500 mt-1 flex justify-between">
+                        <span>Straight</span>
+                        <span>Max Smooth</span>
+                    </div>
                 </div>
-                <input type="range" id="smoothSlider" min="0" max="100" value="0" step="10" class="custom-slider" oninput="applySmoothness(this.value)">
-                <div class="text-[9px] text-gray-500 mt-1">Increase to turn jagged lines into curves (Pen Tool style)</div>
+
+                <!-- DENSITY CONTROL (NEW) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="form-label mb-0"><i class="fa-solid fa-braille text-cyan-400 mr-1"></i> Point Density</label>
+                        <span id="densityVal" class="text-[12px] text-cyan-400 font-bold bg-slate-800 px-2 py-0.5 rounded border border-cyan-500/30">1</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <button class="slider-btn" onclick="changeDensity(-1)">-</button>
+                        <div class="flex-1">
+                             <input type="range" id="densitySlider" min="1" max="10" value="1" step="1" class="custom-slider" oninput="updateGeometry()">
+                        </div>
+                        <button class="slider-btn" onclick="changeDensity(1)">+</button>
+                    </div>
+                    <div class="text-[9px] text-gray-500 mt-1 flex justify-between">
+                        <span>Low (Default)</span>
+                        <span>High (Densified)</span>
+                    </div>
+                </div>
             </div>
 
             <div id="modalStats" class="stats-badge">
@@ -1091,6 +1144,9 @@
 
                             if (layer.setStyle) layer.setStyle({ color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 });
                             
+                            // --- SAVE ORIGINAL GEOMETRY ON IMPORT ---
+                            layer.feature.properties.originalGeometry = JSON.parse(JSON.stringify(feature));
+
                             layer.on('click', function() { openModal(layer); });
                             var tooltipOffset = (feature.geometry.type === 'Point') ? [0, -12] : [0, 0];
                             layer.bindTooltip(layer.feature.properties.name, { direction: 'top', offset: tooltipOffset });
@@ -1170,28 +1226,36 @@
 
             currentLayer = layer;
             
-            // --- NEW: DEEP COPY THE ORIGINAL GEOMETRY FOR SMOOTHING ---
-            // We use JSON stringify/parse to break the reference link
-            tempOriginalGeoJSON = JSON.parse(JSON.stringify(layer.toGeoJSON()));
+            // --- UPDATED: RETRIEVE OR INITIALIZE ORIGINAL GEOMETRY ---
+            // Check if we have a saved original geometry. If not, create it.
+            if (!layer.feature.properties.originalGeometry) {
+                layer.feature.properties.originalGeometry = JSON.parse(JSON.stringify(layer.toGeoJSON()));
+            }
+            
+            // Use the Saved Original as the baseline for all smoothing operations
+            tempOriginalGeoJSON = JSON.parse(JSON.stringify(layer.feature.properties.originalGeometry));
 
             var props = currentLayer.feature.properties;
             document.getElementById('kmlName').value = props.name || "";
             document.getElementById('kmlDesc').value = props.description || "";
             
-            // Reset Slider
+            // Reset Sliders
             document.getElementById('smoothSlider').value = 0;
-            document.getElementById('smoothVal').innerText = "0%";
+            document.getElementById('smoothVal').innerText = "0.0";
+            
+            document.getElementById('densitySlider').value = 1;
+            document.getElementById('densityVal').innerText = "1";
 
             var stats = calculateStats(layer);
             var statsDiv = document.getElementById('modalStats');
-            var smoothContainer = document.getElementById('smoothnessContainer');
+            var geoControls = document.getElementById('geoControls');
 
             if(stats.isPoint) {
                 statsDiv.classList.add('hidden');
-                smoothContainer.classList.add('hidden'); // Hide slider for points
+                geoControls.classList.add('hidden'); // Hide sliders for points
             } else {
                 statsDiv.classList.remove('hidden');
-                smoothContainer.classList.remove('hidden'); // Show slider for polygons/lines
+                geoControls.classList.remove('hidden'); // Show sliders for polygons/lines
                 document.getElementById('statArea').textContent = stats.areaSqMeters;
                 document.getElementById('statPerimeter').textContent = stats.perimeterMeters;
             }
@@ -1245,60 +1309,99 @@
             }
         }
 
-        // --- NEW: SMOOTHING LOGIC (BEZIER SPLINE) ---
-        window.applySmoothness = function(value) {
+        // --- UPDATED: GEOMETRY CONTROLS (Smoothness + Density) ---
+        
+        window.changeSmoothness = function(delta) {
+            var slider = document.getElementById('smoothSlider');
+            var newVal = parseFloat(slider.value) + delta;
+            if(newVal < 0) newVal = 0;
+            if(newVal > 10) newVal = 10;
+            slider.value = newVal;
+            updateGeometry();
+        }
+        
+        window.changeDensity = function(delta) {
+            var slider = document.getElementById('densitySlider');
+            var newVal = parseInt(slider.value) + delta;
+            if(newVal < 1) newVal = 1;
+            if(newVal > 10) newVal = 10;
+            slider.value = newVal;
+            updateGeometry();
+        }
+
+        window.updateGeometry = function() {
             if (!currentLayer || !tempOriginalGeoJSON) return;
 
-            document.getElementById('smoothVal').innerText = value + "%";
-            var resolution = 10000; // Time constant
-            var sharpness = parseFloat(value) / 100.0;
+            var smoothVal = parseFloat(document.getElementById('smoothSlider').value);
+            var densityVal = parseInt(document.getElementById('densitySlider').value);
+            
+            document.getElementById('smoothVal').innerText = smoothVal.toFixed(1);
+            document.getElementById('densityVal').innerText = densityVal;
 
-            // If slider is 0, revert to original jagged shape
-            if (sharpness === 0) {
-                // Revert geometry
-                var coords = tempOriginalGeoJSON.geometry.coordinates;
-                // Leaflet expects LatLng, GeoJSON is LngLat. 
-                // We just feed GeoJSON back to layer via setLatLngs after flipping
-                if (tempOriginalGeoJSON.geometry.type === 'Polygon') {
-                    // Turf/GeoJSON: [Lng, Lat]. Leaflet: [Lat, Lng]
-                    // We can use L.GeoJSON.coordsToLatLngs
-                    var latlngs = L.GeoJSON.coordsToLatLngs(coords, 1);
-                    currentLayer.setLatLngs(latlngs);
-                } else if (tempOriginalGeoJSON.geometry.type === 'LineString') {
-                    var latlngs = L.GeoJSON.coordsToLatLngs(coords, 0);
-                    currentLayer.setLatLngs(latlngs);
-                }
+            // Logic Split:
+            // 1. If Smoothness is 0: Densify the straight lines (add points linearly).
+            // 2. If Smoothness > 0: Use Bezier Spline, and map Density to Resolution.
+
+            if (smoothVal === 0) {
+                // --- STRAIGHT LINE DENSIFICATION ---
+                // For Density 1, we return original.
+                // For Density > 1, we subdivide segments.
+                // We'll treat densityVal as the number of segments to split each edge into.
+                
+                try {
+                    // IMPORTANT: We use the Original GeoJSON as the source, guaranteeing we can revert.
+                    var inputFeature = JSON.parse(JSON.stringify(tempOriginalGeoJSON)); 
+                    var densifiedCoords = [];
+                    
+                    if (inputFeature.geometry.type === 'Polygon') {
+                         var ring = inputFeature.geometry.coordinates[0]; // Outer ring
+                         var newRing = densifyCoords(ring, densityVal);
+                         // Convert to Leaflet LatLngs [Lat, Lng]
+                         var latlngs = L.GeoJSON.coordsToLatLngs([newRing], 1);
+                         currentLayer.setLatLngs(latlngs);
+                    } 
+                    else if (inputFeature.geometry.type === 'LineString') {
+                         var lineCoords = inputFeature.geometry.coordinates;
+                         var newLine = densifyCoords(lineCoords, densityVal);
+                         var latlngs = L.GeoJSON.coordsToLatLngs(newLine, 0);
+                         currentLayer.setLatLngs(latlngs);
+                    }
+                } catch(e) { console.error("Densify error", e); }
+                
             } else {
-                // Apply Bezier Spline
-                // Turf Bezier Spline only works on LineStrings.
-                // If Polygon, we must treat the ring as a line.
+                // --- CURVED LINE (SPLINE) ---
+                // Map Density (1-10) to Resolution (Time in ms).
+                // High Density = Low time step (more points).
+                // Let's set a base range.
+                // Density 1 (Low) -> Resolution 20,000
+                // Density 10 (High) -> Resolution 2,000
+                var resolution = 22000 - (densityVal * 2000);
+                if (resolution < 1000) resolution = 1000;
+                
+                var sharpness = 1.0 - (smoothVal / 10.0);
+                
                 try {
                     var inputFeature = tempOriginalGeoJSON;
                     var smoothed = null;
-
+                    
                     if (inputFeature.geometry.type === 'Polygon') {
-                         // Get the outer ring (LineString)
-                         // Turf expects simple Feature<LineString>
                          var line = turf.lineString(inputFeature.geometry.coordinates[0]);
                          smoothed = turf.bezierSpline(line, {
-                             resolution: 10000, 
-                             sharpness: 1 - sharpness // Turf sharpness: 0 is curvy, 1 is straight. Slider: 100 is curvy.
+                             resolution: resolution, 
+                             sharpness: sharpness 
                          });
-                         // Convert smoothed line back to Polygon coords
                          var latlngs = L.GeoJSON.coordsToLatLngs([smoothed.geometry.coordinates], 1);
                          currentLayer.setLatLngs(latlngs);
                     } 
                     else if (inputFeature.geometry.type === 'LineString') {
                          smoothed = turf.bezierSpline(inputFeature, {
-                             resolution: 10000,
-                             sharpness: 1 - sharpness
+                             resolution: resolution,
+                             sharpness: sharpness
                          });
                          var latlngs = L.GeoJSON.coordsToLatLngs(smoothed.geometry.coordinates, 0);
                          currentLayer.setLatLngs(latlngs);
                     }
-                } catch(e) {
-                    console.log("Smoothing error: " + e);
-                }
+                } catch(e) { console.log("Smoothing error: " + e); }
             }
 
             // Update stats live
@@ -1306,22 +1409,30 @@
             document.getElementById('statArea').textContent = stats.areaSqMeters;
             document.getElementById('statPerimeter').textContent = stats.perimeterMeters;
         }
+        
+        // Helper function to densify coordinate array (Linear Interpolation)
+        function densifyCoords(coords, factor) {
+            if (factor <= 1) return coords;
+            var newCoords = [];
+            for (let i = 0; i < coords.length - 1; i++) {
+                 let p1 = coords[i];
+                 let p2 = coords[i+1];
+                 newCoords.push(p1);
+                 
+                 // Add intermediate points
+                 for (let j = 1; j < factor; j++) {
+                     let t = j / factor;
+                     let x = p1[0] + (p2[0] - p1[0]) * t;
+                     let y = p1[1] + (p2[1] - p1[1]) * t;
+                     newCoords.push([x, y]);
+                 }
+            }
+            newCoords.push(coords[coords.length-1]); // Add last point
+            return newCoords;
+        }
 
         function closeModal() {
-            // If we canceled, we might need to revert if user dragged slider but clicked cancel?
-            // For now, we assume user keeps what they see or clicks save. 
-            // Better UX: Revert on cancel.
-            
-            // Logic: If user clicked cancel, revert to tempOriginalGeoJSON
-            // But 'closeModal' is called by Save too... 
-            // So we handle saving in saveProperties, and reverting here if NOT saved?
-            // To keep it simple: We rely on the user visually confirming. 
-            
             document.getElementById('propModal').style.display = 'none';
-            if(document.getElementById('confirmModal').style.display === 'none') {
-               // We don't null currentLayer here immediately so Cancel button can access it if we added revert logic
-               // But typically we just close.
-            }
         }
 
         // --- Custom Delete Modal Logic ---
@@ -1574,6 +1685,11 @@
                 description: description,
                 visible: true // Default to visible
             };
+            
+            // --- SAVE ORIGINAL GEOMETRY HERE ---
+            // This is the "Master Copy" of the jagged line that we can always revert to.
+            layer.feature.properties.originalGeometry = JSON.parse(JSON.stringify(geojson));
+            
             layerCounter++;
 
             layer.on('click', function() { openModal(layer); });
@@ -1600,6 +1716,12 @@
         });
 
         map.on(L.Draw.Event.EDITED, function (e) {
+            // Update the "Original Geometry" if the user manually moves points on the map
+            // This ensures subsequent smoothing works on the new layout
+            e.layers.eachLayer(function(layer) {
+                layer.feature.properties.originalGeometry = JSON.parse(JSON.stringify(layer.toGeoJSON()));
+            });
+            
             updateSidePanel();
             saveData();
             showToast("Changes Saved");
