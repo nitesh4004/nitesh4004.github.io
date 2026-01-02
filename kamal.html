@@ -164,7 +164,7 @@
         }
 
         /* Modern Inputs - Compact */
-        .sidebar-input {
+        .sidebar-input, .sidebar-select {
             background-color: #334155;
             border: 1px solid #475569;
             color: #f1f5f9;
@@ -174,7 +174,7 @@
             width: 100%;
             transition: all 0.2s;
         }
-        .sidebar-input:focus {
+        .sidebar-input:focus, .sidebar-select:focus {
             outline: none;
             border-color: #00d2d3;
             background-color: #1e293b;
@@ -549,6 +549,18 @@
                 <i class="fa-solid fa-chevron-down text-xs"></i>
             </div>
             <div id="toolContent" class="section-content">
+                
+                <div class="mb-2">
+                    <label class="text-[11px] text-gray-400 font-bold mb-1 block">UNIT SYSTEM</label>
+                    <select id="unitSelect" class="sidebar-select" onchange="updateSidePanel()">
+                        <option value="sqm">Square Meters (m²)</option>
+                        <option value="hectare">Hectare (Ha)</option>
+                        <option value="acre">Acre (Ac)</option>
+                        <option value="sqft">Square Feet (ft²)</option>
+                        <option value="biswa" class="text-cyan-400 font-bold">Biswa (Azamgarh/Purvanchal)</option>
+                    </select>
+                </div>
+
                 <input type="text" id="kmlFileName" placeholder="Filename (e.g. My_Farm)" class="sidebar-input mb-2 mt-2">
                 
                 <div class="flex gap-2 mt-2">
@@ -1003,17 +1015,47 @@
             }
             return L.polygon(points, circle.options);
         }
+        
+        // --- CORE UNIT CONVERSION LOGIC ---
+        function convertArea(sqMeters) {
+            const unit = document.getElementById('unitSelect').value;
+            const sqFeet = sqMeters * 10.7639; // Base Conversion
+
+            switch(unit) {
+                case 'hectare':
+                    return { val: (sqMeters / 10000).toFixed(4), unit: 'Ha' };
+                case 'acre':
+                    return { val: (sqMeters * 0.000247105).toFixed(4), unit: 'Ac' };
+                case 'sqft':
+                    return { val: sqFeet.toFixed(2), unit: 'ft²' };
+                case 'biswa':
+                    // RULE: Area in Biswa = Area in SqFt / 1220
+                    var biswaVal = sqFeet / 1220;
+                    return { val: biswaVal.toFixed(2), unit: 'Biswa' };
+                default: // 'sqm'
+                    return { val: sqMeters.toFixed(2), unit: 'm²' };
+            }
+        }
 
         function calculateStats(layer) {
             try {
                 if(layer instanceof L.Marker) return { area: 0, perimeter: 0, isPoint: true };
                 var geojson = layer.toGeoJSON();
-                var areaSqMeters = turf.area(geojson).toFixed(2);
+                var areaSqMeters = turf.area(geojson);
                 var lengthKm = turf.length(geojson, {units: 'kilometers'});
                 var perimeterMeters = (lengthKm * 1000).toFixed(2);
-                return { areaSqMeters: areaSqMeters, perimeterMeters: perimeterMeters, isPoint: false };
+                
+                // Get converted Area
+                var converted = convertArea(areaSqMeters);
+
+                return { 
+                    areaDisplay: converted.val, 
+                    unitDisplay: converted.unit,
+                    perimeterMeters: perimeterMeters, 
+                    isPoint: false 
+                };
             } catch(e) {
-                return { areaSqMeters: 0, perimeterMeters: 0, isPoint: true };
+                return { areaDisplay: 0, unitDisplay: '', perimeterMeters: 0, isPoint: true };
             }
         }
 
@@ -1036,7 +1078,7 @@
                 var isVisible = (props.visible !== false); // Default true
                 
                 var statsHtml = !stats.isPoint ? 
-                    `<div class="boundary-stats">${stats.areaSqMeters} m² | ${stats.perimeterMeters} m</div>` : 
+                    `<div class="boundary-stats">${stats.areaDisplay} ${stats.unitDisplay} | ${stats.perimeterMeters} m</div>` : 
                     `<div class="boundary-stats">Marker</div>`;
 
                 var eyeIcon = isVisible ? 'fa-eye' : 'fa-eye-slash';
@@ -1066,6 +1108,15 @@
                 
                 listContainer.appendChild(div);
             });
+            
+            // Also update modal stats if open
+            if(document.getElementById('propModal').style.display === 'block' && currentLayer) {
+                var stats = calculateStats(currentLayer);
+                if(!stats.isPoint) {
+                    document.getElementById('statArea').innerHTML = stats.areaDisplay + ' <span class="text-[10px] font-normal opacity-70">' + stats.unitDisplay + '</span>';
+                    document.getElementById('statPerimeter').innerHTML = stats.perimeterMeters + ' <span class="text-[10px] font-normal opacity-70">m</span>';
+                }
+            }
         }
 
         // --- VISIBILITY TOGGLE LOGIC ---
@@ -1256,8 +1307,8 @@
             } else {
                 statsDiv.classList.remove('hidden');
                 geoControls.classList.remove('hidden'); // Show sliders for polygons/lines
-                document.getElementById('statArea').textContent = stats.areaSqMeters;
-                document.getElementById('statPerimeter').textContent = stats.perimeterMeters;
+                document.getElementById('statArea').innerHTML = stats.areaDisplay + ' <span class="text-[10px] font-normal opacity-70">' + stats.unitDisplay + '</span>';
+                document.getElementById('statPerimeter').innerHTML = stats.perimeterMeters + ' <span class="text-[10px] font-normal opacity-70">m</span>';
             }
             document.getElementById('propModal').style.display = 'block';
             
@@ -1406,8 +1457,8 @@
 
             // Update stats live
             var stats = calculateStats(currentLayer);
-            document.getElementById('statArea').textContent = stats.areaSqMeters;
-            document.getElementById('statPerimeter').textContent = stats.perimeterMeters;
+            document.getElementById('statArea').innerHTML = stats.areaDisplay + ' <span class="text-[10px] font-normal opacity-70">' + stats.unitDisplay + '</span>';
+            document.getElementById('statPerimeter').innerHTML = stats.perimeterMeters + ' <span class="text-[10px] font-normal opacity-70">m</span>';
         }
         
         // Helper function to densify coordinate array (Linear Interpolation)
