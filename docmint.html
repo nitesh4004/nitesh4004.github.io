@@ -12,7 +12,7 @@
     <style>
         /* --- CSS VARIABLES & RESET --- */
         :root {
-            --primary-red: #ff4d4d; /* Specific red from your design */
+            --primary-red: #ff4d4d;
             --primary-red-hover: #e60000;
             --sidebar-bg: #ffffff;
             --main-bg: #f8f9fa;
@@ -33,7 +33,7 @@
             background-color: var(--main-bg);
             color: var(--text-dark);
             height: 100vh;
-            overflow: hidden; /* Prevent body scroll, handle in containers */
+            overflow: hidden;
         }
 
         /* --- LAYOUT --- */
@@ -53,9 +53,10 @@
             padding: 24px 20px;
             overflow-y: auto;
             flex-shrink: 0;
+            transition: transform 0.3s ease;
+            z-index: 100;
         }
 
-        /* Brand / Logo Area */
         .brand-header {
             text-align: center;
             margin-bottom: 24px;
@@ -105,7 +106,6 @@
             gap: 8px;
         }
 
-        /* Custom Select Dropdown */
         .input-group {
             margin-bottom: 24px;
         }
@@ -154,7 +154,6 @@
             font-size: 12px;
         }
 
-        /* Tool List (Radio Buttons) */
         .tool-list {
             display: flex;
             flex-direction: column;
@@ -187,9 +186,8 @@
             color: #000;
         }
 
-        /* Selected State */
         .tool-item input[type="radio"]:checked + .tool-card {
-            background-color: #fff0f0; /* Very light red bg */
+            background-color: #fff0f0;
             color: var(--primary-red);
             font-weight: 500;
         }
@@ -207,6 +205,7 @@
             flex-direction: column;
             background-color: var(--main-bg);
             overflow: hidden;
+            position: relative;
         }
 
         .top-bar {
@@ -217,6 +216,13 @@
             align-items: center;
             padding: 0 32px;
             flex-shrink: 0;
+            justify-content: space-between;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .top-bar h2 {
@@ -231,15 +237,16 @@
             overflow-y: auto;
         }
 
-        /* Tool Interface (Placeholder UI) */
+        /* Tool Interface */
         .tool-interface {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background: #fff;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.03);
             padding: 40px;
             text-align: center;
+            min-height: 400px;
         }
 
         .upload-zone {
@@ -247,12 +254,12 @@
             border-radius: 8px;
             padding: 60px 20px;
             margin: 24px 0;
-            transition: border-color 0.3s;
+            transition: all 0.3s;
             cursor: pointer;
             background-color: #fafafa;
         }
 
-        .upload-zone:hover {
+        .upload-zone:hover, .upload-zone.dragover {
             border-color: var(--primary-red);
             background-color: #fffdfd;
         }
@@ -263,45 +270,138 @@
             margin-bottom: 16px;
         }
 
-        .btn-primary {
-            background-color: var(--primary-red);
-            color: white;
-            border: none;
-            padding: 12px 32px;
+        /* Editor Area (Hidden by default) */
+        .editor-area {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .canvas-container {
+            max-width: 100%;
+            max-height: 500px;
+            overflow: auto;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            background: url('data:image/svg+xml;utf8,<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="10" height="10" fill="%23f0f0f0"/><rect x="10" y="10" width="10" height="10" fill="%23f0f0f0"/></svg>');
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 10px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        /* Input Styling */
+        input[type="number"], input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
             border-radius: 6px;
-            font-size: 15px;
+            width: 100px;
+            font-size: 14px;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn-primary, .btn-secondary {
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
+        .btn-primary {
+            background-color: var(--primary-red);
+            color: white;
+        }
         .btn-primary:hover {
             background-color: var(--primary-red-hover);
         }
 
+        .btn-primary.disabled {
+            background-color: #ffcccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background-color: #d0d0d0;
+        }
+
+        .hidden-input {
+            display: none;
+        }
+
         /* Responsive */
+        .mobile-toggle {
+            display: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-dark);
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 position: absolute;
                 transform: translateX(-100%);
                 height: 100%;
-                z-index: 100;
-                transition: transform 0.3s;
+                box-shadow: 5px 0 15px rgba(0,0,0,0.1);
             }
             .sidebar.active {
                 transform: translateX(0);
-                box-shadow: 5px 0 15px rgba(0,0,0,0.1);
             }
             .mobile-toggle {
                 display: block;
-                margin-right: 15px;
-                font-size: 20px;
-                cursor: pointer;
             }
-        }
-        @media (min-width: 769px) {
-            .mobile-toggle {
-                display: none;
+            .top-bar {
+                padding: 0 15px;
+            }
+            .content-scroll {
+                padding: 20px;
             }
         }
     </style>
@@ -329,7 +429,7 @@
                 <div class="select-wrapper">
                     <select id="categorySelect">
                         <option value="image">Image Tools</option>
-                        <option value="pdf">PDF Tools</option>
+                        <option value="pdf">PDF Tools (Demo)</option>
                     </select>
                 </div>
             </div>
@@ -343,8 +443,13 @@
         <!-- Main Workspace -->
         <main class="workspace">
             <header class="top-bar">
-                <i class="fas fa-bars mobile-toggle" id="menuToggle"></i>
-                <h2 id="currentToolTitle">Select a Tool</h2>
+                <div class="top-bar-left">
+                    <i class="fas fa-bars mobile-toggle" id="menuToggle"></i>
+                    <h2 id="currentToolTitle">Select a Tool</h2>
+                </div>
+                <button class="btn-secondary" id="resetBtn" style="display:none;" onclick="resetWorkspace()">
+                    <i class="fas fa-undo"></i> New File
+                </button>
             </header>
             
             <div class="content-scroll">
@@ -355,33 +460,32 @@
         </main>
     </div>
 
+    <!-- Hidden Input for File Upload -->
+    <input type="file" id="fileInput" class="hidden-input" accept="image/*">
+
     <script>
         // --- DATA CONFIGURATION ---
         const toolsData = {
             image: [
-                { id: 'img-compress', name: 'Compress IMAGE', icon: 'fa-file-image' },
-                { id: 'img-resize', name: 'Resize IMAGE', icon: 'fa-expand' },
-                { id: 'img-crop', name: 'Crop IMAGE', icon: 'fa-crop-alt' },
-                { id: 'img-upscale', name: 'Upscale IMAGE', icon: 'fa-arrow-up' },
-                { id: 'img-bg', name: 'Remove Background', icon: 'fa-eraser' },
-                { id: 'img-editor', name: 'Photo Editor', icon: 'fa-sliders-h' },
-                { id: 'img-watermark', name: 'Watermark IMAGE', icon: 'fa-stamp' },
-                { id: 'img-meme', name: 'Meme Generator', icon: 'fa-grin-squint' },
-                { id: 'img-rotate', name: 'Rotate IMAGE', icon: 'fa-sync-alt' },
-                { id: 'img-blur', name: 'Blur Face', icon: 'fa-user-secret' }
+                { id: 'img-compress', name: 'Compress Image', icon: 'fa-file-image', type: 'compress' },
+                { id: 'img-resize', name: 'Resize Image', icon: 'fa-expand', type: 'resize' },
+                { id: 'img-rotate', name: 'Rotate Image', icon: 'fa-sync-alt', type: 'rotate' },
+                { id: 'img-filter', name: 'Apply Filters', icon: 'fa-magic', type: 'filter' },
+                { id: 'img-editor', name: 'General Editor', icon: 'fa-sliders-h', type: 'general' }
             ],
             pdf: [
                 { id: 'pdf-merge', name: 'Merge PDF', icon: 'fa-object-group' },
                 { id: 'pdf-split', name: 'Split PDF', icon: 'fa-cut' },
-                { id: 'pdf-organize', name: 'Organize PDF Pages', icon: 'fa-sort-numeric-down' },
-                { id: 'pdf-compress', name: 'Compress PDF', icon: 'fa-file-pdf' },
-                { id: 'pdf-rotate', name: 'Rotate PDF', icon: 'fa-redo' },
-                { id: 'pdf-protect', name: 'Protect PDF', icon: 'fa-lock' },
-                { id: 'pdf-unlock', name: 'Unlock PDF', icon: 'fa-unlock' },
-                { id: 'pdf-watermark', name: 'Watermark PDF', icon: 'fa-copyright' },
-                { id: 'pdf-numbers', name: 'Page Numbers', icon: 'fa-list-ol' }
+                { id: 'pdf-compress', name: 'Compress PDF', icon: 'fa-file-pdf' }
             ]
         };
+
+        // --- STATE MANAGEMENT ---
+        let currentTool = null;
+        let originalImage = null; // Image Object
+        let currentCanvas = null; // Canvas Element
+        let ctx = null; // Canvas Context
+        let originalAspectRatio = 1;
 
         // --- DOM ELEMENTS ---
         const categorySelect = document.getElementById('categorySelect');
@@ -390,8 +494,28 @@
         const workspaceContent = document.getElementById('workspaceContent');
         const sidebar = document.getElementById('sidebar');
         const menuToggle = document.getElementById('menuToggle');
+        const fileInput = document.getElementById('fileInput');
+        const resetBtn = document.getElementById('resetBtn');
 
-        // --- FUNCTIONS ---
+        // --- INITIALIZATION ---
+        function init() {
+            renderToolList('image');
+            
+            // Sidebar Mobile Toggle
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+
+            // Category Change
+            categorySelect.addEventListener('change', (e) => {
+                renderToolList(e.target.value);
+            });
+
+            // File Input Handling
+            fileInput.addEventListener('change', handleFileSelect);
+        }
+
+        // --- UI RENDERING ---
 
         function renderToolList(category) {
             toolListContainer.innerHTML = '';
@@ -404,20 +528,19 @@
                 const radio = document.createElement('input');
                 radio.type = 'radio';
                 radio.name = 'active_tool';
-                radio.value = tool.name;
+                radio.value = tool.id;
                 radio.id = tool.id;
 
-                // Create the visible card
                 const card = document.createElement('label');
                 card.className = 'tool-card';
                 card.htmlFor = tool.id;
                 card.innerHTML = `<i class="fas ${tool.icon} icon"></i> ${tool.name}`;
 
-                // Event Listener
+                // Tool Selection Event
                 radio.addEventListener('change', () => {
                     loadToolInterface(tool);
                     if(window.innerWidth <= 768) {
-                        sidebar.classList.remove('active'); // Close mobile menu on select
+                        sidebar.classList.remove('active');
                     }
                 });
 
@@ -425,7 +548,7 @@
                 itemDiv.appendChild(card);
                 toolListContainer.appendChild(itemDiv);
 
-                // Default Select First Item
+                // Auto-select first tool
                 if (index === 0) {
                     radio.checked = true;
                     loadToolInterface(tool);
@@ -434,42 +557,388 @@
         }
 
         function loadToolInterface(tool) {
+            currentTool = tool;
             currentToolTitle.innerText = tool.name;
-            
-            // Dynamic Interface Injection
-            workspaceContent.innerHTML = `
-                <div class="tool-interface">
-                    <i class="fas ${tool.icon}" style="font-size: 48px; color: var(--primary-red); margin-bottom: 20px;"></i>
-                    <h3>${tool.name}</h3>
-                    <p style="color: #666; margin-bottom: 30px;">
-                        Securely process your ${categorySelect.value.toUpperCase()} files locally in your browser.
-                    </p>
-                    
-                    <div class="upload-zone" id="dropZone">
-                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                        <p><strong>Choose file</strong> or drag it here</p>
-                    </div>
+            resetBtn.style.display = 'none';
+            originalImage = null; // Reset image state
 
-                    <button class="btn-primary" onclick="alert('File processing logic would start here!')">
-                        Upload & Process
-                    </button>
+            if (categorySelect.value === 'pdf') {
+                renderPdfPlaceholder(tool);
+            } else {
+                renderImageUploader(tool);
+            }
+        }
+
+        function renderPdfPlaceholder(tool) {
+             workspaceContent.innerHTML = `
+                <div class="tool-interface">
+                    <i class="fas ${tool.icon}" style="font-size: 48px; color: var(--text-muted); margin-bottom: 20px;"></i>
+                    <h3>${tool.name} (Demo Mode)</h3>
+                    <p style="color: #666; margin-bottom: 30px;">
+                        Full PDF processing requires backend services. 
+                        <br>Please switch to <strong>Image Tools</strong> for the fully functional tools.
+                    </p>
+                    <div class="upload-zone" style="opacity: 0.5; cursor: not-allowed;">
+                        <i class="fas fa-ban upload-icon"></i>
+                        <p>PDF Upload Disabled in this environment</p>
+                    </div>
                 </div>
             `;
         }
 
-        // --- EVENT LISTENERS ---
+        function renderImageUploader(tool) {
+            workspaceContent.innerHTML = `
+                <div class="tool-interface" id="uploadInterface">
+                    <i class="fas ${tool.icon}" style="font-size: 48px; color: var(--primary-red); margin-bottom: 20px;"></i>
+                    <h3>${tool.name}</h3>
+                    <p style="color: #666; margin-bottom: 30px;">
+                        Securely process your images locally in your browser. 
+                        No data is sent to any server.
+                    </p>
+                    
+                    <div class="upload-zone" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <p><strong>Click to Upload</strong> or drag image here</p>
+                    </div>
+                </div>
 
-        categorySelect.addEventListener('change', (e) => {
-            renderToolList(e.target.value);
-        });
+                <div class="editor-area" id="editorArea">
+                    <div class="canvas-container">
+                        <canvas id="imageCanvas"></canvas>
+                    </div>
+                    <div id="toolControls" class="controls">
+                        <!-- Dynamic Controls will appear here -->
+                    </div>
+                    <div class="controls" style="border-top: none; padding-top: 0; box-shadow:none;">
+                        <button class="btn-primary" id="downloadBtn" onclick="downloadImage()">
+                            <i class="fas fa-download"></i> Download Image
+                        </button>
+                    </div>
+                </div>
+            `;
 
-        menuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('active');
-        });
+            setupDragAndDrop();
+        }
 
-        // --- INITIALIZATION ---
-        // Start with Image tools
-        renderToolList('image');
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+            
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    processFile(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        // --- FILE PROCESSING ---
+
+        function handleFileSelect(e) {
+            if (e.target.files.length) {
+                processFile(e.target.files[0]);
+            }
+        }
+
+        function processFile(file) {
+            if (!file.type.match('image.*')) {
+                alert('Please upload an image file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                originalImage = new Image();
+                originalImage.onload = function() {
+                    originalAspectRatio = originalImage.width / originalImage.height;
+                    initEditor();
+                };
+                originalImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function initEditor() {
+            // Hide upload, show editor
+            document.getElementById('uploadInterface').style.display = 'none';
+            document.getElementById('editorArea').style.display = 'flex';
+            resetBtn.style.display = 'block';
+
+            currentCanvas = document.getElementById('imageCanvas');
+            ctx = currentCanvas.getContext('2d');
+
+            // Set initial dimensions
+            currentCanvas.width = originalImage.width;
+            currentCanvas.height = originalImage.height;
+            
+            // Draw initial image
+            ctx.drawImage(originalImage, 0, 0);
+
+            // Render specific controls based on selected tool
+            renderToolControls();
+        }
+
+        function renderToolControls() {
+            const controlsDiv = document.getElementById('toolControls');
+            controlsDiv.innerHTML = '';
+
+            if (currentTool.type === 'rotate') {
+                controlsDiv.innerHTML = `
+                    <div class="control-group">
+                        <button class="btn-secondary" onclick="rotateImage(-90)"><i class="fas fa-undo"></i> Left 90°</button>
+                        <button class="btn-secondary" onclick="rotateImage(90)"><i class="fas fa-redo"></i> Right 90°</button>
+                        <button class="btn-secondary" onclick="rotateImage(180)">180°</button>
+                    </div>
+                `;
+            } 
+            else if (currentTool.type === 'resize') {
+                 controlsDiv.innerHTML = `
+                    <div class="control-group">
+                        <label>Width:</label>
+                        <input type="number" id="widthInput" value="${originalImage.width}" oninput="updateResizeDimensions('width')">
+                    </div>
+                    <div class="control-group">
+                        <label>Height:</label>
+                        <input type="number" id="heightInput" value="${originalImage.height}" oninput="updateResizeDimensions('height')">
+                    </div>
+                    <div class="control-group">
+                        <select id="unitSelect" onchange="updateResizeDimensions('unit')">
+                            <option value="px">px</option>
+                            <option value="cm">cm</option>
+                            <option value="mm">mm</option>
+                            <option value="in">inch</option>
+                        </select>
+                    </div>
+                    <div class="control-group" style="width:100%; justify-content:center; margin-top:10px;">
+                        <label><input type="checkbox" id="aspectRatioCheck" checked> Maintain Aspect Ratio</label>
+                    </div>
+                    <div class="control-group" style="width:100%; justify-content:center; margin-top:5px;">
+                         <button class="btn-secondary" onclick="applyResize()"><i class="fas fa-check"></i> Apply Resize</button>
+                    </div>
+                `;
+            }
+            else if (currentTool.type === 'compress') {
+                 controlsDiv.innerHTML = `
+                    <div class="control-group">
+                        <label><i class="fas fa-weight-hanging"></i> Expected Size (KB):</label>
+                        <input type="number" id="targetSizeInput" placeholder="e.g. 200" value="200" style="width:120px;">
+                    </div>
+                    <p style="width:100%; text-align:center; font-size:13px; color:#666; margin-top:10px;">
+                        <i class="fas fa-info-circle"></i> The app will attempt to reduce quality until the file fits this size.
+                    </p>
+                `;
+            }
+            else if (currentTool.type === 'filter' || currentTool.type === 'general') {
+                 controlsDiv.innerHTML = `
+                    <div class="control-group">
+                        <button class="btn-secondary" onclick="applyFilter('grayscale')">Grayscale</button>
+                        <button class="btn-secondary" onclick="applyFilter('sepia')">Sepia</button>
+                        <button class="btn-secondary" onclick="applyFilter('invert')">Invert</button>
+                        <button class="btn-secondary" onclick="applyFilter('brightness')">Brighten</button>
+                        <button class="btn-secondary" onclick="resetCanvas()">Original</button>
+                    </div>
+                `;
+            }
+        }
+
+        // --- IMAGE MANIPULATION FUNCTIONS ---
+
+        function resetCanvas() {
+            currentCanvas.width = originalImage.width;
+            currentCanvas.height = originalImage.height;
+            ctx.filter = 'none';
+            ctx.drawImage(originalImage, 0, 0);
+        }
+
+        function rotateImage(degrees) {
+            const offScreen = document.createElement('canvas');
+            const offCtx = offScreen.getContext('2d');
+            
+            if (Math.abs(degrees) === 90) {
+                offScreen.width = currentCanvas.height;
+                offScreen.height = currentCanvas.width;
+            } else {
+                offScreen.width = currentCanvas.width;
+                offScreen.height = currentCanvas.height;
+            }
+
+            offCtx.translate(offScreen.width/2, offScreen.height/2);
+            offCtx.rotate(degrees * Math.PI / 180);
+            offCtx.drawImage(currentCanvas, -currentCanvas.width/2, -currentCanvas.height/2);
+
+            currentCanvas.width = offScreen.width;
+            currentCanvas.height = offScreen.height;
+            ctx.drawImage(offScreen, 0, 0);
+        }
+
+        // --- RESIZE LOGIC ---
+        // Conversion constants (assuming 96 DPI for web context)
+        const UNIT_TO_PX = {
+            'px': 1,
+            'cm': 37.795,
+            'mm': 3.7795,
+            'in': 96
+        };
+
+        function updateResizeDimensions(source) {
+            const wInput = document.getElementById('widthInput');
+            const hInput = document.getElementById('heightInput');
+            const unit = document.getElementById('unitSelect').value;
+            const isAspectLocked = document.getElementById('aspectRatioCheck').checked;
+            
+            const factor = UNIT_TO_PX[unit];
+
+            if (source === 'width' && isAspectLocked) {
+                // Calculate height based on width
+                const pxWidth = parseFloat(wInput.value) * factor; // Input is in unit, convert to px implicitly for logic
+                // Actually, let's keep simple: 
+                // Aspect Ratio is W / H. So H = W / AR.
+                hInput.value = (parseFloat(wInput.value) / originalAspectRatio).toFixed(2);
+            } else if (source === 'height' && isAspectLocked) {
+                // Calculate width based on height
+                // W = H * AR
+                wInput.value = (parseFloat(hInput.value) * originalAspectRatio).toFixed(2);
+            }
+            
+            // Note: We don't apply to canvas yet, user must click Apply
+        }
+
+        function applyResize() {
+            const wInput = document.getElementById('widthInput');
+            const hInput = document.getElementById('heightInput');
+            const unit = document.getElementById('unitSelect').value;
+            const factor = UNIT_TO_PX[unit];
+
+            // Convert input value (in selected unit) to Pixels for Canvas
+            const finalW = parseFloat(wInput.value) * factor;
+            const finalH = parseFloat(hInput.value) * factor;
+
+            if (isNaN(finalW) || isNaN(finalH)) return;
+
+            // Resize Canvas
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = finalW;
+            tempCanvas.height = finalH;
+            
+            // Draw resized image
+            tempCtx.drawImage(originalImage, 0, 0, finalW, finalH);
+            
+            // Update Main Canvas
+            currentCanvas.width = finalW;
+            currentCanvas.height = finalH;
+            ctx.drawImage(tempCanvas, 0, 0);
+        }
+
+        function applyFilter(filter) {
+            if(filter === 'brightness') {
+                ctx.filter = 'brightness(1.2)';
+            } else if (filter === 'grayscale') {
+                ctx.filter = 'grayscale(100%)';
+            } else if (filter === 'sepia') {
+                ctx.filter = 'sepia(100%)';
+            } else if (filter === 'invert') {
+                ctx.filter = 'invert(100%)';
+            } else {
+                ctx.filter = 'none';
+            }
+            // We need to redraw for filter to apply to pixels
+            const temp = document.createElement('canvas');
+            temp.width = currentCanvas.width;
+            temp.height = currentCanvas.height;
+            temp.getContext('2d').drawImage(currentCanvas, 0, 0);
+            
+            ctx.clearRect(0,0,currentCanvas.width, currentCanvas.height);
+            ctx.drawImage(temp, 0, 0);
+        }
+
+        function updateQualityDisplay(val) {
+            // Deprecated by new compress logic
+        }
+
+        // --- DOWNLOAD & COMPRESSION LOGIC ---
+
+        async function downloadImage() {
+            const btn = document.getElementById('downloadBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            btn.classList.add('disabled');
+
+            // Small delay to let UI render the spinner
+            setTimeout(() => {
+                executeDownload();
+                btn.innerHTML = originalText;
+                btn.classList.remove('disabled');
+            }, 100);
+        }
+
+        function executeDownload() {
+            let link = document.createElement('a');
+            link.download = 'docmint-edited.jpg';
+
+            if (currentTool.type === 'compress') {
+                // Advanced Compression Logic
+                const targetKB = parseFloat(document.getElementById('targetSizeInput').value);
+                const targetBytes = targetKB * 1024;
+                
+                let quality = 1.0;
+                let dataUrl = currentCanvas.toDataURL('image/jpeg', quality);
+                
+                // Simple binary search-like step down
+                // If current size > target, reduce quality
+                // 3 iterations to find approximate best fit
+                
+                let attempt = 0;
+                while (attempt < 10) {
+                    // Approximate size of base64: length * 0.75
+                    let currentBytes = Math.round((dataUrl.length - 22) * 0.75); 
+                    
+                    if (currentBytes <= targetBytes) {
+                        break; // We fit!
+                    }
+
+                    // Reduce quality
+                    quality -= 0.1;
+                    if (quality < 0.1) quality = 0.1; 
+                    
+                    dataUrl = currentCanvas.toDataURL('image/jpeg', quality);
+                    
+                    if (quality <= 0.1) break; // Cannot compress further
+                    attempt++;
+                }
+                
+                link.href = dataUrl;
+
+            } else {
+                // Standard Download
+                link.href = currentCanvas.toDataURL('image/jpeg', 0.9);
+            }
+            
+            link.click();
+        }
+
+        function resetWorkspace() {
+            document.getElementById('uploadInterface').style.display = 'block';
+            document.getElementById('editorArea').style.display = 'none';
+            resetBtn.style.display = 'none';
+            fileInput.value = '';
+            currentCanvas = null;
+            originalImage = null;
+        }
+
+        // Initialize App
+        init();
 
     </script>
 </body>
