@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DocMint - Pro Workspace</title>
     
-    <!-- External Dependencies (CDNs) -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
         /* --- CSS VARIABLES & RESET --- */
@@ -322,6 +325,26 @@
             color: var(--text-dark);
         }
 
+        /* File List for PDF */
+        .file-list {
+            text-align: left;
+            margin: 20px auto;
+            max-width: 600px;
+            width: 100%;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .file-item:last-child { border-bottom: none; }
+
         /* Input Styling */
         input[type="number"], input[type="text"] {
             padding: 8px 12px;
@@ -362,6 +385,7 @@
         .btn-primary.disabled {
             background-color: #ffcccc;
             cursor: not-allowed;
+            pointer-events: none;
         }
 
         .btn-secondary {
@@ -409,7 +433,6 @@
 <body>
 
     <div class="app-container">
-        <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="brand-header">
                 <div class="logo-placeholder">
@@ -429,18 +452,16 @@
                 <div class="select-wrapper">
                     <select id="categorySelect">
                         <option value="image">Image Tools</option>
-                        <option value="pdf">PDF Tools (Demo)</option>
+                        <option value="pdf">PDF Tools</option>
                     </select>
                 </div>
             </div>
 
             <div class="input-label" style="margin-bottom: 10px;">Available Tools</div>
             <div id="toolList" class="tool-list">
-                <!-- JavaScript will inject radio buttons here -->
-            </div>
+                </div>
         </aside>
 
-        <!-- Main Workspace -->
         <main class="workspace">
             <header class="top-bar">
                 <div class="top-bar-left">
@@ -454,14 +475,13 @@
             
             <div class="content-scroll">
                 <div id="workspaceContent">
-                    <!-- Dynamic Tool Content Loads Here -->
-                </div>
+                    </div>
             </div>
         </main>
     </div>
 
-    <!-- Hidden Input for File Upload -->
     <input type="file" id="fileInput" class="hidden-input" accept="image/*">
+    <input type="file" id="pdfInput" class="hidden-input" accept="application/pdf">
 
     <script>
         // --- DATA CONFIGURATION ---
@@ -474,9 +494,9 @@
                 { id: 'img-editor', name: 'General Editor', icon: 'fa-sliders-h', type: 'general' }
             ],
             pdf: [
-                { id: 'pdf-merge', name: 'Merge PDF', icon: 'fa-object-group' },
-                { id: 'pdf-split', name: 'Split PDF', icon: 'fa-cut' },
-                { id: 'pdf-compress', name: 'Compress PDF', icon: 'fa-file-pdf' }
+                { id: 'pdf-merge', name: 'Merge PDF', icon: 'fa-object-group', type: 'merge' },
+                { id: 'pdf-split', name: 'Split PDF', icon: 'fa-cut', type: 'split' },
+                { id: 'pdf-compress', name: 'Compress PDF', icon: 'fa-file-pdf', type: 'compress' }
             ]
         };
 
@@ -486,6 +506,8 @@
         let currentCanvas = null; // Canvas Element
         let ctx = null; // Canvas Context
         let originalAspectRatio = 1;
+        
+        let pdfFiles = []; // Array to store selected PDF files
 
         // --- DOM ELEMENTS ---
         const categorySelect = document.getElementById('categorySelect');
@@ -495,6 +517,7 @@
         const sidebar = document.getElementById('sidebar');
         const menuToggle = document.getElementById('menuToggle');
         const fileInput = document.getElementById('fileInput');
+        const pdfInput = document.getElementById('pdfInput');
         const resetBtn = document.getElementById('resetBtn');
 
         // --- INITIALIZATION ---
@@ -511,8 +534,10 @@
                 renderToolList(e.target.value);
             });
 
-            // File Input Handling
+            // File Input Handling (Image)
             fileInput.addEventListener('change', handleFileSelect);
+            // File Input Handling (PDF)
+            pdfInput.addEventListener('change', handlePdfSelect);
         }
 
         // --- UI RENDERING ---
@@ -561,31 +586,54 @@
             currentToolTitle.innerText = tool.name;
             resetBtn.style.display = 'none';
             originalImage = null; // Reset image state
+            pdfFiles = []; // Reset PDF state
 
             if (categorySelect.value === 'pdf') {
-                renderPdfPlaceholder(tool);
+                renderPdfInterface(tool);
             } else {
                 renderImageUploader(tool);
             }
         }
 
-        function renderPdfPlaceholder(tool) {
-             workspaceContent.innerHTML = `
-                <div class="tool-interface">
-                    <i class="fas ${tool.icon}" style="font-size: 48px; color: var(--text-muted); margin-bottom: 20px;"></i>
-                    <h3>${tool.name} (Demo Mode)</h3>
-                    <p style="color: #666; margin-bottom: 30px;">
-                        Full PDF processing requires backend services. 
-                        <br>Please switch to <strong>Image Tools</strong> for the fully functional tools.
-                    </p>
-                    <div class="upload-zone" style="opacity: 0.5; cursor: not-allowed;">
-                        <i class="fas fa-ban upload-icon"></i>
-                        <p>PDF Upload Disabled in this environment</p>
+        // --- PDF INTERFACE ---
+        function renderPdfInterface(tool) {
+            let desc = "Process your PDF files locally.";
+            if (tool.type === 'merge') desc = "Combine multiple PDF files into a single document.";
+            if (tool.type === 'split') desc = "Extract all pages from a PDF into individual files (Zip).";
+            if (tool.type === 'compress') desc = "Optimize PDF structure to reduce file size.";
+
+            workspaceContent.innerHTML = `
+                <div class="tool-interface" id="uploadInterface">
+                    <i class="fas ${tool.icon}" style="font-size: 48px; color: var(--primary-red); margin-bottom: 20px;"></i>
+                    <h3>${tool.name}</h3>
+                    <p style="color: #666; margin-bottom: 30px;">${desc}</p>
+                    
+                    <div class="upload-zone" id="dropZone">
+                        <i class="fas fa-file-pdf upload-icon"></i>
+                        <p><strong>Click to Upload</strong> ${tool.type === 'merge' ? '(Multiple files allowed)' : 'PDF File'}</p>
+                    </div>
+
+                    <div id="pdfProcessingArea" style="display:none; margin-top: 30px;">
+                        <div class="file-list" id="pdfFileList"></div>
+                        <button class="btn-primary" id="processPdfBtn" onclick="processPdfAction()">
+                            <i class="fas fa-cog"></i> Process & Download
+                        </button>
+                        <div id="statusMsg" style="margin-top:15px; font-size:14px; color:#666;"></div>
                     </div>
                 </div>
             `;
+            
+            // Set input multiple attribute for merge
+            if (tool.type === 'merge') {
+                pdfInput.setAttribute('multiple', 'multiple');
+            } else {
+                pdfInput.removeAttribute('multiple');
+            }
+
+            setupDragAndDrop('pdf');
         }
 
+        // --- IMAGE INTERFACE ---
         function renderImageUploader(tool) {
             workspaceContent.innerHTML = `
                 <div class="tool-interface" id="uploadInterface">
@@ -607,8 +655,7 @@
                         <canvas id="imageCanvas"></canvas>
                     </div>
                     <div id="toolControls" class="controls">
-                        <!-- Dynamic Controls will appear here -->
-                    </div>
+                        </div>
                     <div class="controls" style="border-top: none; padding-top: 0; box-shadow:none;">
                         <button class="btn-primary" id="downloadBtn" onclick="downloadImage()">
                             <i class="fas fa-download"></i> Download Image
@@ -617,13 +664,14 @@
                 </div>
             `;
 
-            setupDragAndDrop();
+            setupDragAndDrop('image');
         }
 
-        function setupDragAndDrop() {
+        function setupDragAndDrop(type) {
             const dropZone = document.getElementById('dropZone');
+            const targetInput = type === 'pdf' ? pdfInput : fileInput;
             
-            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('click', () => targetInput.click());
 
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
@@ -638,12 +686,122 @@
                 e.preventDefault();
                 dropZone.classList.remove('dragover');
                 if (e.dataTransfer.files.length) {
-                    processFile(e.dataTransfer.files[0]);
+                    if (type === 'pdf') {
+                        handlePdfFiles(e.dataTransfer.files);
+                    } else {
+                        processFile(e.dataTransfer.files[0]);
+                    }
                 }
             });
         }
 
-        // --- FILE PROCESSING ---
+        // --- PDF LOGIC ---
+
+        function handlePdfSelect(e) {
+            if (e.target.files.length) {
+                handlePdfFiles(e.target.files);
+            }
+        }
+
+        function handlePdfFiles(files) {
+            pdfFiles = Array.from(files);
+            
+            // Show file list
+            const listContainer = document.getElementById('pdfFileList');
+            const procArea = document.getElementById('pdfProcessingArea');
+            listContainer.innerHTML = '';
+            
+            if (pdfFiles.length > 0) {
+                procArea.style.display = 'block';
+                resetBtn.style.display = 'block';
+                document.getElementById('dropZone').style.display = 'none';
+
+                pdfFiles.forEach(f => {
+                    const item = document.createElement('div');
+                    item.className = 'file-item';
+                    item.innerHTML = `<span><i class="fas fa-file-pdf"></i> ${f.name}</span> <span>${(f.size/1024/1024).toFixed(2)} MB</span>`;
+                    listContainer.appendChild(item);
+                });
+            }
+        }
+
+        async function processPdfAction() {
+            const btn = document.getElementById('processPdfBtn');
+            const msg = document.getElementById('statusMsg');
+            const { PDFDocument } = PDFLib;
+
+            btn.classList.add('disabled');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            msg.innerText = "Please wait, manipulating PDF data...";
+
+            try {
+                if (currentTool.type === 'merge') {
+                    const mergedPdf = await PDFDocument.create();
+                    
+                    for (const file of pdfFiles) {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await PDFDocument.load(arrayBuffer);
+                        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                        copiedPages.forEach((page) => mergedPdf.addPage(page));
+                    }
+                    
+                    const pdfBytes = await mergedPdf.save();
+                    downloadBlob(pdfBytes, 'merged-document.pdf', 'application/pdf');
+                
+                } else if (currentTool.type === 'split') {
+                    // Split logic: Extract every page to a Zip
+                    const file = pdfFiles[0];
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await PDFDocument.load(arrayBuffer);
+                    const zip = new JSZip();
+                    const numPages = pdf.getPageCount();
+
+                    msg.innerText = `Splitting ${numPages} pages...`;
+
+                    for (let i = 0; i < numPages; i++) {
+                        const newPdf = await PDFDocument.create();
+                        const [copiedPage] = await newPdf.copyPages(pdf, [i]);
+                        newPdf.addPage(copiedPage);
+                        const pdfBytes = await newPdf.save();
+                        zip.file(`page-${i + 1}.pdf`, pdfBytes);
+                    }
+
+                    const zipContent = await zip.generateAsync({type:"blob"});
+                    saveAs(zipContent, "split-pages.zip");
+
+                } else if (currentTool.type === 'compress') {
+                    // Basic Structure Optimization
+                    const file = pdfFiles[0];
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await PDFDocument.load(arrayBuffer);
+                    
+                    // PDF-lib doesn't do aggressive image downsampling client-side easily
+                    // But saving it often cleans up garbage object streams
+                    const pdfBytes = await pdf.save({ useObjectStreams: false }); 
+                    downloadBlob(pdfBytes, 'compressed-optimized.pdf', 'application/pdf');
+                }
+                
+                msg.innerText = "Done! Download started.";
+
+            } catch (err) {
+                console.error(err);
+                msg.innerText = "Error processing PDF. Ensure it's not password protected.";
+                alert("An error occurred: " + err.message);
+            } finally {
+                btn.classList.remove('disabled');
+                btn.innerHTML = '<i class="fas fa-cog"></i> Process & Download';
+            }
+        }
+
+        function downloadBlob(data, filename, type) {
+            const blob = new Blob([data], { type: type });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        // --- IMAGE PROCESSING ---
 
         function handleFileSelect(e) {
             if (e.target.files.length) {
@@ -783,7 +941,6 @@
         }
 
         // --- RESIZE LOGIC ---
-        // Conversion constants (assuming 96 DPI for web context)
         const UNIT_TO_PX = {
             'px': 1,
             'cm': 37.795,
@@ -800,18 +957,10 @@
             const factor = UNIT_TO_PX[unit];
 
             if (source === 'width' && isAspectLocked) {
-                // Calculate height based on width
-                const pxWidth = parseFloat(wInput.value) * factor; // Input is in unit, convert to px implicitly for logic
-                // Actually, let's keep simple: 
-                // Aspect Ratio is W / H. So H = W / AR.
                 hInput.value = (parseFloat(wInput.value) / originalAspectRatio).toFixed(2);
             } else if (source === 'height' && isAspectLocked) {
-                // Calculate width based on height
-                // W = H * AR
                 wInput.value = (parseFloat(hInput.value) * originalAspectRatio).toFixed(2);
             }
-            
-            // Note: We don't apply to canvas yet, user must click Apply
         }
 
         function applyResize() {
@@ -820,22 +969,18 @@
             const unit = document.getElementById('unitSelect').value;
             const factor = UNIT_TO_PX[unit];
 
-            // Convert input value (in selected unit) to Pixels for Canvas
             const finalW = parseFloat(wInput.value) * factor;
             const finalH = parseFloat(hInput.value) * factor;
 
             if (isNaN(finalW) || isNaN(finalH)) return;
 
-            // Resize Canvas
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
             tempCanvas.width = finalW;
             tempCanvas.height = finalH;
             
-            // Draw resized image
             tempCtx.drawImage(originalImage, 0, 0, finalW, finalH);
             
-            // Update Main Canvas
             currentCanvas.width = finalW;
             currentCanvas.height = finalH;
             ctx.drawImage(tempCanvas, 0, 0);
@@ -853,7 +998,6 @@
             } else {
                 ctx.filter = 'none';
             }
-            // We need to redraw for filter to apply to pixels
             const temp = document.createElement('canvas');
             temp.width = currentCanvas.width;
             temp.height = currentCanvas.height;
@@ -863,11 +1007,7 @@
             ctx.drawImage(temp, 0, 0);
         }
 
-        function updateQualityDisplay(val) {
-            // Deprecated by new compress logic
-        }
-
-        // --- DOWNLOAD & COMPRESSION LOGIC ---
+        // --- IMAGE DOWNLOAD LOGIC ---
 
         async function downloadImage() {
             const btn = document.getElementById('downloadBtn');
@@ -875,7 +1015,6 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
             btn.classList.add('disabled');
 
-            // Small delay to let UI render the spinner
             setTimeout(() => {
                 executeDownload();
                 btn.innerHTML = originalText;
@@ -888,40 +1027,32 @@
             link.download = 'docmint-edited.jpg';
 
             if (currentTool.type === 'compress') {
-                // Advanced Compression Logic
                 const targetKB = parseFloat(document.getElementById('targetSizeInput').value);
                 const targetBytes = targetKB * 1024;
                 
                 let quality = 1.0;
                 let dataUrl = currentCanvas.toDataURL('image/jpeg', quality);
                 
-                // Simple binary search-like step down
-                // If current size > target, reduce quality
-                // 3 iterations to find approximate best fit
-                
                 let attempt = 0;
                 while (attempt < 10) {
-                    // Approximate size of base64: length * 0.75
                     let currentBytes = Math.round((dataUrl.length - 22) * 0.75); 
                     
                     if (currentBytes <= targetBytes) {
-                        break; // We fit!
+                        break; 
                     }
 
-                    // Reduce quality
                     quality -= 0.1;
                     if (quality < 0.1) quality = 0.1; 
                     
                     dataUrl = currentCanvas.toDataURL('image/jpeg', quality);
                     
-                    if (quality <= 0.1) break; // Cannot compress further
+                    if (quality <= 0.1) break; 
                     attempt++;
                 }
                 
                 link.href = dataUrl;
 
             } else {
-                // Standard Download
                 link.href = currentCanvas.toDataURL('image/jpeg', 0.9);
             }
             
@@ -931,10 +1062,17 @@
         function resetWorkspace() {
             document.getElementById('uploadInterface').style.display = 'block';
             document.getElementById('editorArea').style.display = 'none';
+            // Hide PDF area if open
+            const pdfArea = document.getElementById('pdfProcessingArea');
+            if(pdfArea) pdfArea.style.display = 'none';
+            document.getElementById('dropZone').style.display = 'block';
+
             resetBtn.style.display = 'none';
             fileInput.value = '';
+            pdfInput.value = '';
             currentCanvas = null;
             originalImage = null;
+            pdfFiles = [];
         }
 
         // Initialize App
