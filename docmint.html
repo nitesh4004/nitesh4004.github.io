@@ -3,505 +3,473 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Splitter</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>DocMint - Pro Workspace</title>
+    
+    <!-- External Dependencies (CDNs) -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --primary-red: #ff4d4d; /* Specific red from your design */
+            --primary-red-hover: #e60000;
+            --sidebar-bg: #ffffff;
+            --main-bg: #f8f9fa;
+            --text-dark: #2c3e50;
+            --text-muted: #7f8c8d;
+            --border-color: #e0e0e0;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--main-bg);
+            color: var(--text-dark);
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll, handle in containers */
         }
-        .drop-zone {
-            transition: all 0.3s ease;
+
+        /* --- LAYOUT --- */
+        .app-container {
+            display: flex;
+            height: 100%;
+            width: 100%;
         }
-        .drop-zone:hover {
-            border-color: #3b82f6;
-            background-color: #eff6ff;
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
         }
-        .drop-zone.drag-over {
-            border-color: #2563eb;
-            background-color: #dbeafe;
-            transform: scale(1.02);
+
+        /* Brand / Logo Area */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 24px;
         }
-        /* Custom scrollbar for better aesthetics */
-        ::-webkit-scrollbar {
-            width: 8px;
+
+        .logo-placeholder {
+            width: 48px;
+            height: 48px;
+            background-color: #f1f3f4;
+            border-radius: 12px;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-red);
+            font-size: 24px;
         }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
+
+        .brand-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
+
+        .subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
+
+        .divider {
+            height: 1px;
+            background-color: #f0f0f0;
+            border: none;
+            margin: 0 0 24px 0;
+        }
+
+        /* Tools Menu Section */
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Custom Select Dropdown */
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #fff;
+            color: var(--text-dark);
+            appearance: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary-red);
+        }
+
+        .select-wrapper::after {
+            content: '\f107'; /* FontAwesome chevron-down */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+            font-size: 12px;
+        }
+
+        /* Tool List (Radio Buttons) */
+        .tool-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tool-item {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .tool-item input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .tool-card {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .tool-card:hover {
+            background-color: #fefefe;
+            color: #000;
+        }
+
+        /* Selected State */
+        .tool-item input[type="radio"]:checked + .tool-card {
+            background-color: #fff0f0; /* Very light red bg */
+            color: var(--primary-red);
+            font-weight: 500;
+        }
+
+        .tool-card .icon {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* --- MAIN WORKSPACE --- */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--main-bg);
+            overflow: hidden;
+        }
+
+        .top-bar {
+            height: 70px;
+            background-color: #fff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            flex-shrink: 0;
+        }
+
+        .top-bar h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .content-scroll {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        /* Tool Interface (Placeholder UI) */
+        .tool-interface {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .upload-zone {
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 60px 20px;
+            margin: 24px 0;
+            transition: border-color 0.3s;
+            cursor: pointer;
+            background-color: #fafafa;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary-red);
+            background-color: #fffdfd;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #ccc;
+            margin-bottom: 16px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-red);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-red-hover);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                transform: translateX(-100%);
+                height: 100%;
+                z-index: 100;
+                transition: transform 0.3s;
+            }
+            .sidebar.active {
+                transform: translateX(0);
+                box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+            }
+            .mobile-toggle {
+                display: block;
+                margin-right: 15px;
+                font-size: 20px;
+                cursor: pointer;
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-toggle {
+                display: none;
+            }
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col text-slate-800">
+<body>
 
-    <!-- Navbar -->
-    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="scissors" class="h-6 w-6 text-blue-600"></i>
-                    <span class="font-bold text-xl tracking-tight text-slate-900">PDF Splitter</span>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand-header">
+                <div class="logo-placeholder">
+                    <i class="fas fa-layer-group"></i>
                 </div>
-                <div class="text-sm text-slate-500 hidden sm:block">
-                    Local Processing • Secure • Fast
+                <h1>DocMint</h1>
+                <p class="subtitle">Pro Workspace</p>
+            </div>
+
+            <hr class="divider">
+
+            <div class="input-group">
+                <div class="section-title">
+                    <i class="fas fa-tools"></i> Tools Menu
+                </div>
+                <label class="input-label">Select Category</label>
+                <div class="select-wrapper">
+                    <select id="categorySelect">
+                        <option value="image">Image Tools</option>
+                        <option value="pdf">PDF Tools</option>
+                    </select>
                 </div>
             </div>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="flex-grow container mx-auto px-4 py-8 sm:py-12 max-w-7xl">
-        
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div class="input-label" style="margin-bottom: 10px;">Available Tools</div>
+            <div id="toolList" class="tool-list">
+                <!-- JavaScript will inject radio buttons here -->
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            <header class="top-bar">
+                <i class="fas fa-bars mobile-toggle" id="menuToggle"></i>
+                <h2 id="currentToolTitle">Select a Tool</h2>
+            </header>
             
-            <!-- Left Column: Controls -->
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 flex flex-col">
-                
-                <!-- Header Section -->
-                <div class="bg-slate-50 px-6 py-8 sm:px-10 text-center border-b border-slate-100">
-                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Split PDF Files</h1>
-                    <p class="text-slate-600">Extract specific pages from your document instantly.</p>
-                </div>
-
-                <div class="p-6 sm:p-10 space-y-8 flex-grow">
-
-                    <!-- Upload Section -->
-                    <div class="space-y-4">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Upload Document</label>
-                        <div id="dropZone" class="drop-zone border-2 border-dashed border-slate-300 rounded-xl p-8 text-center cursor-pointer relative group">
-                            <input type="file" id="fileInput" accept="application/pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                            <div class="space-y-3 pointer-events-none">
-                                <div class="mx-auto h-12 w-12 text-slate-400 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                                    <i data-lucide="upload-cloud" class="h-6 w-6"></i>
-                                </div>
-                                <div class="space-y-1">
-                                    <p class="text-sm font-semibold text-slate-700">Click to upload or drag and drop</p>
-                                    <p class="text-xs text-slate-500">PDF files only (Max 50MB recommended)</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- File Info (Hidden initially) -->
-                        <div id="fileInfo" class="hidden animate-fade-in bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-center justify-between">
-                            <div class="flex items-center gap-3 overflow-hidden">
-                                <div class="bg-blue-100 p-2 rounded-lg text-blue-600 shrink-0">
-                                    <i data-lucide="file-text" class="h-5 w-5"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <p id="fileName" class="text-sm font-medium text-slate-900 truncate">document.pdf</p>
-                                    <p id="pageCount" class="text-xs text-slate-500">Loading pages...</p>
-                                </div>
-                            </div>
-                            <button id="removeFileBtn" class="p-1 hover:bg-blue-200 rounded-full text-slate-500 hover:text-red-500 transition-colors" title="Remove file">
-                                <i data-lucide="x" class="h-4 w-4"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Controls Section (Disabled initially) -->
-                    <div id="controlsSection" class="opacity-50 pointer-events-none transition-opacity duration-300 space-y-6">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div class="space-y-2">
-                                <label for="startPage" class="block text-sm font-medium text-slate-700">Start Page</label>
-                                <div class="relative">
-                                    <input type="number" id="startPage" min="1" value="1" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm pl-4 pr-4 py-2.5 border">
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                                        <span class="text-xs">From</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="space-y-2">
-                                <label for="endPage" class="block text-sm font-medium text-slate-700">End Page</label>
-                                <div class="relative">
-                                    <input type="number" id="endPage" min="1" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm pl-4 pr-4 py-2.5 border">
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                                        <span class="text-xs">To</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Range Preview Slider (Visual) -->
-                        <div class="space-y-2">
-                            <div class="flex justify-between text-xs text-slate-500 font-medium">
-                                <span>Page 1</span>
-                                <span id="maxPageLabel">Page ?</span>
-                            </div>
-                            <div class="h-2 bg-slate-200 rounded-full overflow-hidden relative">
-                                <div id="rangeBar" class="absolute top-0 bottom-0 bg-blue-500 rounded-full transition-all duration-300" style="left: 0%; right: 0%;"></div>
-                            </div>
-                            <p class="text-xs text-center text-slate-500 mt-1" id="selectionSummary">Select a file to see page range</p>
-                        </div>
-
-                        <button id="splitBtn" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl shadow-lg shadow-blue-600/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
-                            <i data-lucide="scissors" class="h-5 w-5"></i>
-                            <span>Split & Download PDF</span>
-                        </button>
-                    </div>
-
-                    <!-- Error/Success Messages -->
-                    <div id="messageArea" class="hidden rounded-lg p-4 text-sm font-medium"></div>
-
+            <div class="content-scroll">
+                <div id="workspaceContent">
+                    <!-- Dynamic Tool Content Loads Here -->
                 </div>
             </div>
-
-            <!-- Right Column: PDF Preview -->
-            <div id="previewSection" class="hidden lg:block bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 h-[600px] lg:h-[800px] flex flex-col relative transition-opacity duration-500 opacity-0">
-                 <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                    <h2 class="font-semibold text-slate-700 flex items-center gap-2">
-                        <i data-lucide="eye" class="h-4 w-4"></i> Document Preview
-                    </h2>
-                </div>
-                <div class="flex-grow bg-slate-100 relative">
-                    <iframe id="pdfPreviewFrame" class="w-full h-full absolute inset-0 border-0" title="PDF Preview"></iframe>
-                    <div id="previewPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
-                        <i data-lucide="file-search" class="h-12 w-12 mb-3 opacity-50"></i>
-                        <p class="text-sm">Upload a PDF to preview it here</p>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Instructions / FAQ -->
-        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center sm:text-left">
-            <div class="p-4 bg-white rounded-xl shadow-sm border border-slate-100">
-                <div class="h-10 w-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3 mx-auto sm:mx-0">
-                    <i data-lucide="shield-check" class="h-5 w-5"></i>
-                </div>
-                <h3 class="font-semibold text-slate-900">100% Secure</h3>
-                <p class="text-sm text-slate-500 mt-1">Files are processed entirely in your browser. No data leaves your device.</p>
-            </div>
-            <div class="p-4 bg-white rounded-xl shadow-sm border border-slate-100">
-                <div class="h-10 w-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-3 mx-auto sm:mx-0">
-                    <i data-lucide="zap" class="h-5 w-5"></i>
-                </div>
-                <h3 class="font-semibold text-slate-900">Lightning Fast</h3>
-                <p class="text-sm text-slate-500 mt-1">No upload or download waiting times. Processing is instant.</p>
-            </div>
-            <div class="p-4 bg-white rounded-xl shadow-sm border border-slate-100">
-                <div class="h-10 w-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-3 mx-auto sm:mx-0">
-                    <i data-lucide="layers" class="h-5 w-5"></i>
-                </div>
-                <h3 class="font-semibold text-slate-900">High Quality</h3>
-                <p class="text-sm text-slate-500 mt-1">Maintains original formatting, fonts, and resolution.</p>
-            </div>
-        </div>
-
-    </main>
-
-    <footer class="bg-white border-t border-slate-200 mt-auto">
-        <div class="max-w-5xl mx-auto px-4 py-6 text-center text-sm text-slate-500">
-            &copy; 2024 PDF Tool. All rights reserved.
-        </div>
-    </footer>
+        </main>
+    </div>
 
     <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+        // --- DATA CONFIGURATION ---
+        const toolsData = {
+            image: [
+                { id: 'img-compress', name: 'Compress IMAGE', icon: 'fa-file-image' },
+                { id: 'img-resize', name: 'Resize IMAGE', icon: 'fa-expand' },
+                { id: 'img-crop', name: 'Crop IMAGE', icon: 'fa-crop-alt' },
+                { id: 'img-upscale', name: 'Upscale IMAGE', icon: 'fa-arrow-up' },
+                { id: 'img-bg', name: 'Remove Background', icon: 'fa-eraser' },
+                { id: 'img-editor', name: 'Photo Editor', icon: 'fa-sliders-h' },
+                { id: 'img-watermark', name: 'Watermark IMAGE', icon: 'fa-stamp' },
+                { id: 'img-meme', name: 'Meme Generator', icon: 'fa-grin-squint' },
+                { id: 'img-rotate', name: 'Rotate IMAGE', icon: 'fa-sync-alt' },
+                { id: 'img-blur', name: 'Blur Face', icon: 'fa-user-secret' }
+            ],
+            pdf: [
+                { id: 'pdf-merge', name: 'Merge PDF', icon: 'fa-object-group' },
+                { id: 'pdf-split', name: 'Split PDF', icon: 'fa-cut' },
+                { id: 'pdf-organize', name: 'Organize PDF Pages', icon: 'fa-sort-numeric-down' },
+                { id: 'pdf-compress', name: 'Compress PDF', icon: 'fa-file-pdf' },
+                { id: 'pdf-rotate', name: 'Rotate PDF', icon: 'fa-redo' },
+                { id: 'pdf-protect', name: 'Protect PDF', icon: 'fa-lock' },
+                { id: 'pdf-unlock', name: 'Unlock PDF', icon: 'fa-unlock' },
+                { id: 'pdf-watermark', name: 'Watermark PDF', icon: 'fa-copyright' },
+                { id: 'pdf-numbers', name: 'Page Numbers', icon: 'fa-list-ol' }
+            ]
+        };
 
-        // DOM Elements
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const fileInfo = document.getElementById('fileInfo');
-        const fileNameDisplay = document.getElementById('fileName');
-        const pageCountDisplay = document.getElementById('pageCount');
-        const removeFileBtn = document.getElementById('removeFileBtn');
-        const controlsSection = document.getElementById('controlsSection');
-        const startPageInput = document.getElementById('startPage');
-        const endPageInput = document.getElementById('endPage');
-        const maxPageLabel = document.getElementById('maxPageLabel');
-        const selectionSummary = document.getElementById('selectionSummary');
-        const rangeBar = document.getElementById('rangeBar');
-        const splitBtn = document.getElementById('splitBtn');
-        const messageArea = document.getElementById('messageArea');
-        
-        // Preview Elements
-        const previewSection = document.getElementById('previewSection');
-        const pdfPreviewFrame = document.getElementById('pdfPreviewFrame');
-        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        // --- DOM ELEMENTS ---
+        const categorySelect = document.getElementById('categorySelect');
+        const toolListContainer = document.getElementById('toolList');
+        const currentToolTitle = document.getElementById('currentToolTitle');
+        const workspaceContent = document.getElementById('workspaceContent');
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menuToggle');
 
-        // State
-        let currentPDFBytes = null;
-        let currentPDFDoc = null;
-        let totalPages = 0;
-        let previewUrl = null;
+        // --- FUNCTIONS ---
 
-        // Drag and Drop Effects
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-        });
+        function renderToolList(category) {
+            toolListContainer.innerHTML = '';
+            const tools = toolsData[category];
 
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
+            tools.forEach((tool, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'tool-item';
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, highlight, false);
-        });
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'active_tool';
+                radio.value = tool.name;
+                radio.id = tool.id;
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, unhighlight, false);
-        });
+                // Create the visible card
+                const card = document.createElement('label');
+                card.className = 'tool-card';
+                card.htmlFor = tool.id;
+                card.innerHTML = `<i class="fas ${tool.icon} icon"></i> ${tool.name}`;
 
-        function highlight() {
-            dropZone.classList.add('drag-over');
-        }
+                // Event Listener
+                radio.addEventListener('change', () => {
+                    loadToolInterface(tool);
+                    if(window.innerWidth <= 768) {
+                        sidebar.classList.remove('active'); // Close mobile menu on select
+                    }
+                });
 
-        function unhighlight() {
-            dropZone.classList.remove('drag-over');
-        }
+                itemDiv.appendChild(radio);
+                itemDiv.appendChild(card);
+                toolListContainer.appendChild(itemDiv);
 
-        // Handle File Selection
-        fileInput.addEventListener('change', handleFiles);
-        dropZone.addEventListener('drop', handleDrop);
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles({ target: { files: files } });
-        }
-
-        async function handleFiles(e) {
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
-
-            const file = files[0];
-            if (file.type !== 'application/pdf') {
-                showMessage('Please upload a valid PDF file.', 'error');
-                return;
-            }
-
-            resetState();
-            showMessage('Loading PDF...', 'info');
-
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                currentPDFBytes = arrayBuffer;
-                
-                // Load PDF to get page count
-                currentPDFDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-                totalPages = currentPDFDoc.getPageCount();
-
-                // Update UI
-                fileNameDisplay.textContent = file.name;
-                pageCountDisplay.textContent = `${totalPages} page${totalPages !== 1 ? 's' : ''}`;
-                fileInfo.classList.remove('hidden');
-                dropZone.classList.add('hidden'); // Hide dropzone to save space or swap
-
-                // Enable controls
-                controlsSection.classList.remove('opacity-50', 'pointer-events-none');
-                
-                // Set default inputs
-                startPageInput.max = totalPages;
-                endPageInput.max = totalPages;
-                endPageInput.value = totalPages;
-                maxPageLabel.textContent = `Page ${totalPages}`;
-
-                // Setup Preview
-                setupPreview(arrayBuffer);
-                
-                updateVisuals();
-                hideMessage();
-
-            } catch (err) {
-                console.error(err);
-                showMessage('Error loading PDF. The file might be corrupted or password protected.', 'error');
-                resetState();
-            }
-        }
-        
-        function setupPreview(arrayBuffer) {
-            // Revoke old URL if exists to prevent memory leaks
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-            }
-            
-            const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-            previewUrl = URL.createObjectURL(blob);
-            
-            pdfPreviewFrame.src = previewUrl;
-            
-            // Show preview section (remove hidden class for mobile handling logic if needed, but mainly opacity)
-            previewSection.classList.remove('hidden');
-            // Small timeout to allow transition
-            setTimeout(() => {
-                previewSection.classList.remove('opacity-0');
-            }, 100);
-            
-            previewPlaceholder.classList.add('hidden');
-        }
-
-        // Reset App State
-        function resetState() {
-            currentPDFBytes = null;
-            currentPDFDoc = null;
-            totalPages = 0;
-            fileInput.value = '';
-            fileInfo.classList.add('hidden');
-            dropZone.classList.remove('hidden');
-            controlsSection.classList.add('opacity-50', 'pointer-events-none');
-            startPageInput.value = 1;
-            endPageInput.value = '';
-            
-            // Reset Preview
-            pdfPreviewFrame.src = '';
-            previewSection.classList.add('opacity-0');
-            // Hide after fade out
-            setTimeout(() => {
-                if(!currentPDFBytes) {
-                    previewSection.classList.add('hidden');
-                    previewPlaceholder.classList.remove('hidden');
+                // Default Select First Item
+                if (index === 0) {
+                    radio.checked = true;
+                    loadToolInterface(tool);
                 }
-            }, 300);
-            
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-                previewUrl = null;
-            }
-
-            hideMessage();
+            });
         }
 
-        removeFileBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent triggering label click
-            resetState();
+        function loadToolInterface(tool) {
+            currentToolTitle.innerText = tool.name;
+            
+            // Dynamic Interface Injection
+            workspaceContent.innerHTML = `
+                <div class="tool-interface">
+                    <i class="fas ${tool.icon}" style="font-size: 48px; color: var(--primary-red); margin-bottom: 20px;"></i>
+                    <h3>${tool.name}</h3>
+                    <p style="color: #666; margin-bottom: 30px;">
+                        Securely process your ${categorySelect.value.toUpperCase()} files locally in your browser.
+                    </p>
+                    
+                    <div class="upload-zone" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <p><strong>Choose file</strong> or drag it here</p>
+                    </div>
+
+                    <button class="btn-primary" onclick="alert('File processing logic would start here!')">
+                        Upload & Process
+                    </button>
+                </div>
+            `;
+        }
+
+        // --- EVENT LISTENERS ---
+
+        categorySelect.addEventListener('change', (e) => {
+            renderToolList(e.target.value);
         });
 
-        // Input Logic & Validation
-        function updateVisuals() {
-            if (!totalPages) return;
-
-            let start = parseInt(startPageInput.value) || 1;
-            let end = parseInt(endPageInput.value) || totalPages;
-
-            // Clamping for visualization only (actual validation happens on split)
-            if (start < 1) start = 1;
-            if (end > totalPages) end = totalPages;
-
-            // Calculate percentage for progress bar
-            const startPct = ((start - 1) / totalPages) * 100;
-            const endPct = 100 - ((end / totalPages) * 100);
-
-            rangeBar.style.left = `${startPct}%`;
-            rangeBar.style.right = `${endPct}%`;
-
-            // Update text summary
-            const count = Math.max(0, end - start + 1);
-            selectionSummary.textContent = `Extracting ${count} page${count !== 1 ? 's' : ''} (Pages ${start} - ${end})`;
-        }
-
-        startPageInput.addEventListener('input', updateVisuals);
-        endPageInput.addEventListener('input', updateVisuals);
-
-        // Split Logic
-        splitBtn.addEventListener('click', async () => {
-            if (!currentPDFDoc) return;
-
-            const start = parseInt(startPageInput.value);
-            const end = parseInt(endPageInput.value);
-
-            // Validation
-            if (isNaN(start) || isNaN(end)) {
-                showMessage('Please enter valid page numbers.', 'error');
-                return;
-            }
-            if (start < 1 || end > totalPages) {
-                showMessage(`Page range must be between 1 and ${totalPages}.`, 'error');
-                return;
-            }
-            if (start > end) {
-                showMessage('Start page cannot be greater than end page.', 'error');
-                return;
-            }
-
-            setLoading(true);
-
-            try {
-                // Create a new PDF Document
-                const newPdf = await PDFLib.PDFDocument.create();
-                
-                // Calculate indices (0-based for pdf-lib)
-                const pageIndices = [];
-                for (let i = start; i <= end; i++) {
-                    pageIndices.push(i - 1);
-                }
-
-                // Copy pages
-                const copiedPages = await newPdf.copyPages(currentPDFDoc, pageIndices);
-                
-                // Add pages to the new document
-                copiedPages.forEach(page => newPdf.addPage(page));
-
-                // Serialize the PDFDocument to bytes (a Uint8Array)
-                const pdfBytes = await newPdf.save();
-
-                // Trigger Download
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                
-                const originalName = fileNameDisplay.textContent.replace('.pdf', '');
-                link.href = url;
-                link.download = `${originalName}_pages_${start}-${end}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-
-                showMessage('PDF successfully split and downloaded!', 'success');
-
-            } catch (err) {
-                console.error(err);
-                showMessage('An error occurred while splitting the PDF.', 'error');
-            } finally {
-                setLoading(false);
-            }
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
         });
 
-        // UI Helpers
-        function showMessage(msg, type) {
-            messageArea.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700', 'bg-blue-50', 'text-blue-700');
-            
-            if (type === 'error') {
-                messageArea.classList.add('bg-red-50', 'text-red-700');
-            } else if (type === 'success') {
-                messageArea.classList.add('bg-green-50', 'text-green-700');
-            } else {
-                messageArea.classList.add('bg-blue-50', 'text-blue-700');
-            }
-            
-            messageArea.textContent = msg;
-        }
-
-        function hideMessage() {
-            messageArea.classList.add('hidden');
-        }
-
-        function setLoading(isLoading) {
-            const btnText = splitBtn.querySelector('span');
-            const icon = splitBtn.querySelector('i');
-            
-            if (isLoading) {
-                splitBtn.disabled = true;
-                splitBtn.classList.add('opacity-75', 'cursor-not-allowed');
-                btnText.textContent = 'Processing...';
-            } else {
-                splitBtn.disabled = false;
-                splitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-                btnText.textContent = 'Split & Download PDF';
-            }
-        }
+        // --- INITIALIZATION ---
+        // Start with Image tools
+        renderToolList('image');
 
     </script>
 </body>
