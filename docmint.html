@@ -3,39 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doct Mint - PDF Tools</title>
+    <title>Doct Mint - Professional PDF & Image Tools</title>
     
     <!-- PDF Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- New: PDF-Lib for high-quality splitting without rasterization -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     
-    <!-- Tailwind CSS for UI -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- FontAwesome for Icons -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
                     },
                     colors: {
                         mint: {
-                            50: '#f0fdf9',
+                            50: '#f0fdfa',
                             100: '#ccfbf1',
                             200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
                             500: '#14b8a6',
                             600: '#0d9488',
                             700: '#0f766e',
+                            800: '#115e59',
                             900: '#134e4a',
+                        },
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(20, 184, 166, 0.3)',
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.3s ease-out forwards',
+                        'fade-in': 'fadeIn 0.4s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
                         }
                     }
                 }
@@ -44,595 +69,694 @@
     </script>
     <style>
         body {
-            background-color: #f0fdf9; /* Mint-50 */
+            background-color: #f0fdfa;
+            background-image: radial-gradient(#ccfbf1 1px, transparent 1px);
+            background-size: 24px 24px;
         }
-        .drop-active {
-            border-color: #14b8a6;
-            background-color: #ccfbf1;
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .drop-zone {
+            transition: all 0.3s ease;
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23CBD5E1FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
         }
-        .fade-in {
-            animation: fadeIn 0.4s ease-in-out;
+        .drop-zone.active {
+            background-color: #f0fdfa;
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%2314B8A6FF' stroke-width='3' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+            transform: scale(1.01);
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        /* Tab Transitions */
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.4s ease-in-out;
-        }
-        .tab-btn {
-            position: relative;
-        }
-        .tab-btn.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background-color: #0d9488; /* mint-600 */
-            border-radius: 3px 3px 0 0;
-        }
+        .segment-bg { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        
+        /* Card Hover Effects */
+        .mode-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px -5px rgba(20, 184, 166, 0.15); }
     </style>
 </head>
-<body class="text-slate-700 min-h-screen flex flex-col">
+<body class="text-slate-600 min-h-screen flex flex-col font-sans selection:bg-mint-100 selection:text-mint-800">
 
     <!-- Navbar -->
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <i class="fa-solid fa-leaf text-mint-600 text-2xl mr-3"></i>
-                    <span class="font-bold text-xl tracking-tight text-slate-800">Doct Mint</span>
+    <nav class="bg-white/80 backdrop-blur-md sticky top-0 z-20 border-b border-slate-200/60">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-mint-400 to-mint-600 flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-leaf text-sm"></i>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <a href="#" class="text-slate-500 hover:text-mint-600 transition text-sm font-medium">Help</a>
-                </div>
+                <span class="font-bold text-xl tracking-tight text-slate-800">Doct Mint</span>
             </div>
+            <button onclick="goHome()" class="text-sm font-medium text-slate-500 hover:text-mint-600 transition hidden" id="back-home-btn">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Back to Home
+            </button>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="flex-grow flex items-center justify-center p-4">
-        <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden fade-in">
+    <main class="flex-grow flex flex-col items-center justify-start pt-10 px-4 pb-20 relative">
+
+        <!-- ==========================
+             SCREEN 1: LANDING / SELECTION
+             ========================== -->
+        <div id="landing-screen" class="w-full max-w-4xl animate-slide-up">
+            <div class="text-center mb-12">
+                <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">What do you want to work on?</h1>
+                <p class="text-slate-500 text-lg">Select your file type to get started with secure, local processing.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+                <!-- PDF Card -->
+                <div onclick="selectMode('pdf')" class="mode-card bg-white rounded-3xl p-8 cursor-pointer border border-slate-100 shadow-soft transition-all duration-300 group">
+                    <div class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">PDF Tools</h2>
+                    <p class="text-slate-500 mb-6">Invert colors, split pages, merge documents, or compress file size.</p>
+                    <div class="flex items-center text-mint-600 font-semibold group-hover:translate-x-1 transition-transform">
+                        Select PDF Tools <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </div>
+                </div>
+
+                <!-- Image Card -->
+                <div onclick="selectMode('image')" class="mode-card bg-white rounded-3xl p-8 cursor-pointer border border-slate-100 shadow-soft transition-all duration-300 group">
+                    <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-images"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Image Tools</h2>
+                    <p class="text-slate-500 mb-6">Convert images to PDF, invert colors, or compress generic images.</p>
+                    <div class="flex items-center text-mint-600 font-semibold group-hover:translate-x-1 transition-transform">
+                        Select Image Tools <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================
+             SCREEN 2: WORKSPACE (Shared Container)
+             ========================== -->
+        <div id="workspace-screen" class="hidden w-full max-w-3xl animate-fade-in">
             
-            <!-- Header Section -->
-            <div class="bg-gradient-to-r from-mint-600 to-mint-500 p-8 text-white text-center">
-                <h1 class="text-3xl font-bold mb-2">PDF Tools</h1>
-                <p class="text-mint-100 opacity-90">Secure, client-side PDF processing.</p>
-            </div>
-
-            <!-- Tabs -->
-            <div class="flex border-b border-slate-200 bg-slate-50">
-                <button onclick="switchTab('invert')" id="tab-btn-invert" class="tab-btn active flex-1 py-4 text-sm font-semibold text-slate-600 hover:text-mint-700 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Invert Colors
-                </button>
-                <button onclick="switchTab('split')" id="tab-btn-split" class="tab-btn flex-1 py-4 text-sm font-semibold text-slate-600 hover:text-mint-700 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-scissors"></i> Split PDF
-                </button>
-            </div>
-
-            <div class="p-8 space-y-8">
+            <div class="bg-white rounded-3xl shadow-soft border border-slate-100 overflow-hidden relative">
                 
-                <!-- Shared: Upload Step -->
-                <div id="upload-section">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold text-slate-800"><span class="bg-mint-100 text-mint-700 w-8 h-8 rounded-full inline-flex items-center justify-center mr-2 text-sm">1</span> Upload Document</h2>
-                    </div>
-                    
-                    <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center transition-all duration-300 hover:border-mint-500 hover:bg-slate-50 cursor-pointer relative">
-                        <input type="file" id="upload" accept=".pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div id="upload-placeholder">
-                            <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-400 mb-3"></i>
-                            <p class="text-slate-600 font-medium">Click to upload or drag and drop</p>
-                            <p class="text-xs text-slate-400 mt-1">PDF files only</p>
-                        </div>
-                        <div id="file-info" class="hidden">
-                            <i class="fa-solid fa-file-pdf text-4xl text-red-500 mb-3"></i>
-                            <p id="display-filename" class="text-slate-800 font-bold text-lg truncate px-4"></p>
-                            <p id="page-count" class="text-sm text-slate-500 mt-1">Calculating pages...</p>
-                            <button id="remove-file" class="mt-4 text-xs text-red-500 hover:text-red-700 underline z-20 relative">Remove file</button>
-                        </div>
+                <!-- Dynamic Tabs Container -->
+                <div class="p-4 bg-white border-b border-slate-100">
+                    <div id="tab-container" class="relative bg-slate-100 rounded-xl p-1 flex">
+                        <!-- BG Pill -->
+                        <div id="tab-bg" class="segment-bg absolute top-1 bottom-1 bg-white rounded-lg shadow-sm w-[33%] left-1 z-0"></div>
+                        <!-- Tabs injected via JS -->
                     </div>
                 </div>
 
-                <!-- =========================
-                     TAB 1: INVERT COLORS
-                     ========================= -->
-                <div id="tab-invert" class="tab-content active">
-                    <div id="settings-invert" class="opacity-50 pointer-events-none transition-opacity duration-300">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold text-slate-800"><span class="bg-mint-100 text-mint-700 w-8 h-8 rounded-full inline-flex items-center justify-center mr-2 text-sm">2</span> Invert Settings</h2>
+                <div class="p-8">
+                    <!-- Dynamic Header -->
+                    <div class="mb-6 flex justify-between items-end">
+                        <div>
+                            <h2 id="section-title" class="text-xl font-bold text-slate-800">Tool Name</h2>
+                            <p id="section-desc" class="text-slate-500 text-sm mt-1">Tool Description</p>
                         </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Output Filename</label>
-                                <div class="relative">
-                                    <input type="text" id="file-name" value="dark_mode_doc" class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-mint-500 focus:border-mint-500 outline-none transition">
-                                    <span class="absolute right-3 top-2 text-slate-400 text-sm">.pdf</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Quality (PPI)</label>
-                                <select id="resolution" class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-mint-500 focus:border-mint-500 outline-none bg-white transition cursor-pointer">
-                                    <option value="72">72 PPI (Fastest)</option>
-                                    <option value="150" selected>150 PPI (Recommended)</option>
-                                    <option value="200">200 PPI (High Quality)</option>
-                                    <option value="300">300 PPI (Print Quality - Slow)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button id="process-button-invert" disabled class="w-full py-4 bg-mint-600 hover:bg-mint-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg shadow-mint-500/30 transition-all duration-200 transform hover:-translate-y-1 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            <span>Invert & Download PDF</span>
-                        </button>
+                        <div id="step-badge" class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Step 1/2</div>
                     </div>
-                </div>
 
-                <!-- =========================
-                     TAB 2: SPLIT PDF
-                     ========================= -->
-                <div id="tab-split" class="tab-content">
-                    <div id="settings-split" class="opacity-50 pointer-events-none transition-opacity duration-300">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold text-slate-800"><span class="bg-mint-100 text-mint-700 w-8 h-8 rounded-full inline-flex items-center justify-center mr-2 text-sm">2</span> Split Settings</h2>
-                        </div>
-
-                        <div class="space-y-4 mb-6">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Page Ranges</label>
-                                <input type="text" id="split-range" placeholder="e.g. 1-3, 5, 8-10" class="w-full pl-3 pr-3 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-mint-500 focus:border-mint-500 outline-none transition font-mono text-slate-600">
-                                <p class="text-xs text-slate-400 mt-1">Enter page numbers and/or ranges separated by commas.</p>
-                            </div>
+                    <!-- Upload Zone -->
+                    <div id="upload-container" class="mb-8">
+                        <div id="drop-zone" class="drop-zone relative h-64 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 group overflow-hidden">
+                            <input type="file" id="upload" class="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer">
                             
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Output Filename</label>
-                                <div class="relative">
-                                    <input type="text" id="file-name-split" value="split_doc" class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-mint-500 focus:border-mint-500 outline-none transition">
-                                    <span class="absolute right-3 top-2 text-slate-400 text-sm">.pdf</span>
+                            <!-- Placeholder -->
+                            <div id="upload-placeholder" class="pointer-events-none transition-transform duration-300 group-hover:scale-105">
+                                <div class="w-16 h-16 bg-mint-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-mint-500 group-hover:bg-mint-100 transition-colors">
+                                    <i class="fa-solid fa-cloud-arrow-up text-3xl animate-float"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-slate-700">Drop file(s) here</h3>
+                                <p id="upload-hint" class="text-slate-400 text-sm mt-1">or click to browse</p>
+                            </div>
+
+                            <!-- Single File Preview -->
+                            <div id="file-info" class="hidden w-full max-w-sm px-6 relative z-10 pointer-events-none">
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0">
+                                        <i id="file-icon" class="fa-solid fa-file text-xl"></i>
+                                    </div>
+                                    <div class="flex-grow min-w-0 text-left">
+                                        <p id="display-filename" class="font-medium text-slate-800 truncate">filename</p>
+                                        <p id="file-meta" class="text-xs text-slate-500">Scanning...</p>
+                                    </div>
+                                    <button id="remove-file" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors pointer-events-auto">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Multi File Preview -->
+                            <div id="multi-file-info" class="hidden w-full h-full p-4 relative z-10">
+                                <div class="h-full flex flex-col">
+                                    <div class="flex justify-between items-center mb-2 px-2">
+                                        <span class="text-sm font-semibold text-slate-600"><span id="multi-file-count">0</span> Files</span>
+                                        <button id="remove-all-files" class="text-xs text-red-500 hover:text-red-700 font-medium pointer-events-auto">Clear All</button>
+                                    </div>
+                                    <div id="file-list" class="flex-grow overflow-y-auto custom-scroll space-y-2 px-1 pointer-events-auto">
+                                        <!-- Items injected -->
+                                    </div>
+                                    <div class="mt-2 text-center pointer-events-none">
+                                        <span class="text-xs text-slate-400 bg-white/80 px-2 py-1 rounded">+ Add more</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        <button id="process-button-split" disabled class="w-full py-4 bg-mint-600 hover:bg-mint-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg shadow-mint-500/30 transition-all duration-200 transform hover:-translate-y-1 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-scissors"></i>
-                            <span>Extract Pages & Download</span>
-                        </button>
                     </div>
-                </div>
 
-                <!-- Processing Overlay (Shared) -->
-                <div id="processing-view" class="hidden fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4 fade-in">
-                    <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl border border-slate-100 text-center">
-                        <div class="mb-6 relative">
-                            <!-- Spinner -->
-                            <div class="w-16 h-16 border-4 border-mint-100 border-t-mint-600 rounded-full animate-spin mx-auto"></div>
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <i id="processing-icon" class="fa-solid fa-gear text-mint-600 text-xl"></i>
-                            </div>
-                        </div>
-                        
-                        <h3 class="text-xl font-bold text-slate-800 mb-2">Processing Document</h3>
-                        <p id="status-text" class="text-slate-500 text-sm mb-6">Preparing engine...</p>
-
-                        <!-- Progress Bar -->
-                        <div class="w-full bg-slate-100 rounded-full h-4 mb-2 overflow-hidden">
-                            <div id="progress-bar" class="bg-mint-500 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                        
-                        <div class="flex justify-between text-xs text-slate-400 font-medium">
-                            <span id="page-progress">0%</span>
-                            <span id="time-remaining">Please wait...</span>
-                        </div>
+                    <!-- Settings Panel (Dynamic Content) -->
+                    <div id="settings-panel" class="bg-slate-50 rounded-2xl p-6 border border-slate-100 transition-all duration-300 opacity-50 pointer-events-none">
+                        <!-- Injected via JS based on active tool -->
                     </div>
+
                 </div>
-
-                <!-- Success View (Shared) -->
-                <div id="success-view" class="hidden fixed inset-0 bg-mint-50/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4 fade-in">
-                    <div class="w-full max-w-md bg-white p-10 rounded-2xl shadow-2xl border border-mint-100 text-center relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-mint-400 to-emerald-500"></div>
-
-                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <i class="fa-solid fa-check text-4xl text-green-500"></i>
-                        </div>
-                        
-                        <h3 class="text-2xl font-bold text-slate-800 mb-2">All Done!</h3>
-                        <p class="text-slate-500 mb-8">Your document is ready.</p>
-                        
-                        <div class="flex flex-col gap-3">
-                            <button id="download-again" class="w-full py-3 bg-mint-600 hover:bg-mint-700 text-white font-semibold rounded-lg shadow-md transition flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-download"></i> Download PDF
-                            </button>
-                            <button onclick="location.reload()" class="w-full py-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg transition">
-                                Process Another File
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-6 mt-8">
-        <div class="max-w-5xl mx-auto px-4 text-center text-slate-400 text-sm">
-            <p>&copy; 2026 Doct Mint. Secure & Client-side processing.</p>
-        </div>
+    <footer class="text-center pb-8 pt-4">
+        <p class="text-slate-400 text-sm">© 2026 Doct Mint. Crafted by Nitesh Kumar.</p>
     </footer>
 
-    <!-- Logic -->
+    <!-- Processing Overlay -->
+    <div id="processing-view" class="hidden fixed inset-0 glass z-50 flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-white p-8 rounded-3xl shadow-2xl border border-slate-100 text-center animate-slide-up">
+            <div class="relative w-20 h-20 mx-auto mb-6">
+                <div class="absolute inset-0 border-4 border-mint-100 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-mint-500 border-t-transparent rounded-full animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-mint-600 text-2xl">
+                    <i id="processing-icon" class="fa-solid fa-gear"></i>
+                </div>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">Processing...</h3>
+            <p id="status-text" class="text-slate-500 text-sm mb-6 h-5">Initializing...</p>
+            <div class="w-full bg-slate-100 rounded-full h-3 mb-3 overflow-hidden">
+                <div id="progress-bar" class="bg-gradient-to-r from-mint-400 to-mint-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs font-semibold text-slate-400">
+                <span id="page-progress">0%</span>
+                <span id="time-remaining">Calculating...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Overlay -->
+    <div id="success-view" class="hidden fixed inset-0 bg-mint-900/10 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-white p-8 rounded-3xl shadow-2xl border border-white/50 text-center animate-slide-up relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-mint-300 via-mint-500 to-mint-300"></div>
+            <div class="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl shadow-sm">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-800 mb-2">Done!</h3>
+            <p class="text-slate-500 mb-8">Your file is ready.</p>
+            <button id="download-again" class="w-full py-3.5 bg-mint-600 hover:bg-mint-700 text-white font-bold rounded-xl shadow-lg shadow-mint-500/20 mb-3 flex items-center justify-center gap-2 transition-transform hover:-translate-y-0.5">
+                <i class="fa-solid fa-download"></i> Download File
+            </button>
+            <button onclick="goHome()" class="w-full py-3.5 bg-white border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+                Start Over
+            </button>
+        </div>
+    </div>
+
     <script>
-        // --- Setup PDF.js ---
+        // --- Libraries ---
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // --- DOM Elements ---
-        const dropZone = document.getElementById('drop-zone');
-        const uploadInput = document.getElementById('upload');
-        const uploadPlaceholder = document.getElementById('upload-placeholder');
-        const fileInfo = document.getElementById('file-info');
-        const displayFilename = document.getElementById('display-filename');
-        const pageCountLabel = document.getElementById('page-count');
-        const removeFileBtn = document.getElementById('remove-file');
-        
-        // Invert Elements
-        const settingsInvert = document.getElementById('settings-invert');
-        const fileNameInput = document.getElementById('file-name');
-        const resolutionSelect = document.getElementById('resolution');
-        const processButtonInvert = document.getElementById('process-button-invert');
-        
-        // Split Elements
-        const settingsSplit = document.getElementById('settings-split');
-        const splitRangeInput = document.getElementById('split-range');
-        const fileNameSplitInput = document.getElementById('file-name-split');
-        const processButtonSplit = document.getElementById('process-button-split');
-
-        // Views
-        const processingView = document.getElementById('processing-view');
-        const progressBar = document.getElementById('progress-bar');
-        const statusText = document.getElementById('status-text');
-        const pageProgress = document.getElementById('page-progress');
-        const timeRemainingLabel = document.getElementById('time-remaining');
-        const processingIcon = document.getElementById('processing-icon');
-        
-        const successView = document.getElementById('success-view');
-        const downloadAgainBtn = document.getElementById('download-again');
-
-        // --- State ---
-        let currentTab = 'invert';
-        let pdfInstance = null; // for pdf.js (Invert)
-        let pdfFileArrayBuffer = null; // for pdf-lib (Split)
-        let pdfFile = null;
-        let generatedPdfBlob = null;
-        let totalPagesCount = 0;
-
-        // --- Tabs Logic ---
-        window.switchTab = function(tabName) {
-            currentTab = tabName;
-            
-            // UI Toggle
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-            
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('active', 'text-mint-700');
-                el.classList.add('text-slate-600');
-            });
-            const activeBtn = document.getElementById(`tab-btn-${tabName}`);
-            activeBtn.classList.add('active', 'text-mint-700');
-            activeBtn.classList.remove('text-slate-600');
+        // --- Configuration Data ---
+        const MODES = {
+            pdf: {
+                tabs: ['invert', 'split', 'merge', 'compress'],
+                accept: '.pdf',
+                icon: 'fa-file-pdf',
+                hint: 'Drop PDF file(s)'
+            },
+            image: {
+                tabs: ['img2pdf', 'invertimg', 'compressimg'],
+                accept: 'image/png, image/jpeg, image/jpg',
+                icon: 'fa-file-image',
+                hint: 'Drop JPG/PNG file(s)'
+            }
         };
 
-        // --- Drag & Drop UX ---
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-        });
+        const TOOLS = {
+            // PDF Tools
+            invert: { title: "Invert Colors", desc: "Dark mode for PDFs.", icon: "fa-wand-magic-sparkles", multi: false },
+            split: { title: "Split PDF", desc: "Extract specific pages.", icon: "fa-scissors", multi: false },
+            merge: { title: "Merge PDFs", desc: "Combine multiple PDFs.", icon: "fa-layer-group", multi: true },
+            compress: { title: "Compress PDF", desc: "Reduce PDF file size.", icon: "fa-compress", multi: false },
+            
+            // Image Tools
+            img2pdf: { title: "Image to PDF", desc: "Convert images to a single PDF.", icon: "fa-file-pdf", multi: true },
+            invertimg: { title: "Invert Image", desc: "Dark mode for images.", icon: "fa-eye-dropper", multi: false },
+            compressimg: { title: "Compress Image", desc: "Resize and optimize images.", icon: "fa-minimize", multi: false }
+        };
 
-        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
-        ['dragenter', 'dragover'].forEach(eventName => dropZone.addEventListener(eventName, highlight, false));
-        ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, unhighlight, false));
-        function highlight() { dropZone.classList.add('drop-active'); }
-        function unhighlight() { dropZone.classList.remove('drop-active'); }
-        dropZone.addEventListener('drop', handleDrop, false);
+        // --- State ---
+        let currentMode = null; // 'pdf' or 'image'
+        let currentTool = null;
+        let filesList = []; // Array of File objects
+        let pdfInstance = null; // For single PDF ops
+        let resultBlob = null;
+        let resultExt = 'pdf'; // 'pdf' or 'jpg'
 
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files);
+        // --- DOM Elements ---
+        const landingScreen = document.getElementById('landing-screen');
+        const workspaceScreen = document.getElementById('workspace-screen');
+        const backHomeBtn = document.getElementById('back-home-btn');
+        const tabContainer = document.getElementById('tab-container');
+        const tabBg = document.getElementById('tab-bg');
+        const settingsPanel = document.getElementById('settings-panel');
+        const uploadInput = document.getElementById('upload');
+        const dropZone = document.getElementById('drop-zone');
+
+        // --- Navigation ---
+        function selectMode(mode) {
+            currentMode = mode;
+            landingScreen.classList.add('hidden');
+            workspaceScreen.classList.remove('hidden');
+            backHomeBtn.classList.remove('hidden');
+            
+            // Setup Upload
+            uploadInput.accept = MODES[mode].accept;
+            document.getElementById('upload-hint').textContent = MODES[mode].hint;
+
+            renderTabs();
+            // Default to first tab
+            switchTool(MODES[mode].tabs[0]);
         }
 
-        uploadInput.addEventListener('change', function() {
-            handleFiles(this.files);
-        });
+        function goHome() {
+            location.reload();
+        }
 
-        // --- File Handling ---
-        async function handleFiles(files) {
-            if (files.length > 0) {
-                const file = files[0];
-                if (file.type === 'application/pdf') {
-                    pdfFile = file;
-                    
-                    // Read file as ArrayBuffer for PDF-Lib (Split)
-                    const arrayBuffer = await file.arrayBuffer();
-                    pdfFileArrayBuffer = arrayBuffer;
+        function renderTabs() {
+            // Clear existing tabs except bg
+            const children = Array.from(tabContainer.children);
+            children.forEach(child => { if (child.id !== 'tab-bg') child.remove(); });
 
-                    // UI Updates
-                    uploadPlaceholder.classList.add('hidden');
-                    fileInfo.classList.remove('hidden');
-                    displayFilename.textContent = file.name;
-                    
-                    // Name defaults
-                    const baseName = file.name.replace('.pdf', '');
-                    fileNameInput.value = baseName + '_dark';
-                    fileNameSplitInput.value = baseName + '_split';
-                    
-                    // Load PDF via PDF.js to get page count (Lightweight check)
-                    try {
-                        const url = URL.createObjectURL(file);
-                        pdfInstance = await pdfjsLib.getDocument(url).promise;
-                        totalPagesCount = pdfInstance.numPages;
-                        
-                        pageCountLabel.textContent = `${totalPagesCount} Pages detected`;
-                        
-                        // Enable Settings in BOTH tabs
-                        settingsInvert.classList.remove('opacity-50', 'pointer-events-none');
-                        settingsSplit.classList.remove('opacity-50', 'pointer-events-none');
-                        
-                        processButtonInvert.disabled = false;
-                        processButtonSplit.disabled = false;
-                        
-                    } catch (error) {
-                        console.error(error);
-                        alert('Error reading PDF. It might be corrupted.');
-                        resetUI();
-                    }
+            const tabs = MODES[currentMode].tabs;
+            const widthPct = 100 / tabs.length;
+            tabBg.style.width = `${widthPct}%`; // Fix bg width
+
+            tabs.forEach(toolKey => {
+                const tool = TOOLS[toolKey];
+                const btn = document.createElement('button');
+                btn.className = "relative z-10 flex-1 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors duration-200 flex items-center justify-center gap-2 rounded-lg";
+                btn.id = `btn-${toolKey}`;
+                btn.onclick = () => switchTool(toolKey);
+                btn.innerHTML = `<i class="fa-solid ${tool.icon}"></i> <span class="hidden sm:inline">${tool.title}</span>`;
+                tabContainer.appendChild(btn);
+            });
+        }
+
+        function switchTool(toolKey) {
+            currentTool = toolKey;
+            const tool = TOOLS[toolKey];
+            
+            // Update Header
+            document.getElementById('section-title').textContent = tool.title;
+            document.getElementById('section-desc').textContent = tool.desc;
+
+            // Move Tab BG
+            const tabs = MODES[currentMode].tabs;
+            const idx = tabs.indexOf(toolKey);
+            tabBg.style.left = `${(idx * (100 / tabs.length)) + 0.5}%`; // simple pct math
+
+            // Update Tab Styles
+            tabs.forEach(k => {
+                const el = document.getElementById(`btn-${k}`);
+                if (k === toolKey) {
+                    el.classList.remove('text-slate-500');
+                    el.classList.add('text-slate-800');
                 } else {
-                    alert('Please upload a valid PDF file.');
-                }
-            }
-        }
-
-        removeFileBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            resetUI();
-        });
-
-        function resetUI() {
-            uploadInput.value = '';
-            pdfFile = null;
-            pdfInstance = null;
-            pdfFileArrayBuffer = null;
-            uploadPlaceholder.classList.remove('hidden');
-            fileInfo.classList.add('hidden');
-            
-            settingsInvert.classList.add('opacity-50', 'pointer-events-none');
-            settingsSplit.classList.add('opacity-50', 'pointer-events-none');
-            
-            processButtonInvert.disabled = true;
-            processButtonSplit.disabled = true;
-        }
-
-        // ==========================================
-        // FEATURE 1: INVERT COLORS (Rasterization)
-        // ==========================================
-        processButtonInvert.addEventListener('click', async () => {
-            if (!pdfInstance) return;
-
-            processingView.classList.remove('hidden');
-            processingIcon.className = "fa-solid fa-palette text-mint-600 text-xl";
-            
-            const { jsPDF } = window.jspdf;
-            const fileName = fileNameInput.value.trim() || 'doct_mint_result';
-            const resolution = parseInt(resolutionSelect.value);
-            const totalPages = pdfInstance.numPages;
-
-            let doc = null;
-            const startTime = Date.now();
-
-            try {
-                for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
-                    
-                    statusText.textContent = `Rendering page ${pageNumber}...`;
-                    pageProgress.textContent = `${Math.round((pageNumber/totalPages)*100)}%`;
-                    
-                    const page = await pdfInstance.getPage(pageNumber);
-                    const viewport = page.getViewport({ scale: resolution / 72 });
-                    
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-                    statusText.textContent = `Inverting page ${pageNumber}...`;
-                    await new Promise(r => setTimeout(r, 10)); // UI Yield
-
-                    context.globalCompositeOperation = 'difference';
-                    context.fillStyle = 'white';
-                    context.fillRect(0, 0, canvas.width, canvas.height);
-
-                    const pageWidth = (viewport.width * 72) / resolution;
-                    const pageHeight = (viewport.height * 72) / resolution;
-
-                    if (!doc) {
-                        doc = new jsPDF({
-                            orientation: pageWidth > pageHeight ? 'landscape' : 'portrait',
-                            unit: 'pt',
-                            format: [pageWidth, pageHeight],
-                            compress: true 
-                        });
-                    } else {
-                        doc.addPage([pageWidth, pageHeight]);
-                        doc.setPage(pageNumber);
-                    }
-
-                    const imgData = canvas.toDataURL('image/jpeg', 0.8);
-                    doc.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
-
-                    updateProgress(pageNumber, totalPages, startTime);
-                    await new Promise(r => setTimeout(r, 20));
-                }
-
-                finishProcessing(doc, fileName);
-
-            } catch (error) {
-                handleError(error);
-            }
-        });
-
-
-        // ==========================================
-        // FEATURE 2: SPLIT PDF (Native Extraction)
-        // ==========================================
-        processButtonSplit.addEventListener('click', async () => {
-            if (!pdfFileArrayBuffer) return;
-
-            // 1. Parse Range
-            const rangeStr = splitRangeInput.value.trim();
-            if (!rangeStr) {
-                alert("Please enter a page range (e.g., 1-3, 5).");
-                return;
-            }
-
-            const pagesToExtract = parsePageRange(rangeStr, totalPagesCount);
-            if (pagesToExtract.length === 0) {
-                alert("No valid pages selected. Please check your range.");
-                return;
-            }
-
-            processingView.classList.remove('hidden');
-            processingIcon.className = "fa-solid fa-scissors text-mint-600 text-xl";
-            statusText.textContent = "Initializing Split Engine...";
-
-            try {
-                // 2. Load PDF with PDF-Lib
-                const { PDFDocument } = PDFLib;
-                const srcDoc = await PDFDocument.load(pdfFileArrayBuffer);
-                const newDoc = await PDFDocument.create();
-
-                statusText.textContent = `Extracting ${pagesToExtract.length} pages...`;
-                progressBar.style.width = '30%';
-
-                // 3. Copy Pages (Indices are 0-based in pdf-lib)
-                const indices = pagesToExtract.map(p => p - 1);
-                const copiedPages = await newDoc.copyPages(srcDoc, indices);
-
-                for (let i = 0; i < copiedPages.length; i++) {
-                    newDoc.addPage(copiedPages[i]);
-                    // Update UI fake progress
-                    const pct = 30 + Math.round(((i + 1) / copiedPages.length) * 60);
-                    progressBar.style.width = `${pct}%`;
-                    pageProgress.textContent = `${pct}%`;
-                    await new Promise(r => setTimeout(r, 10)); 
-                }
-
-                statusText.textContent = "Saving new PDF...";
-                const pdfBytes = await newDoc.save();
-                
-                // 4. Download
-                const fileName = fileNameSplitInput.value.trim() || 'split_doc';
-                generatedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-                
-                progressBar.style.width = '100%';
-                pageProgress.textContent = '100%';
-                
-                await new Promise(r => setTimeout(r, 400));
-                
-                // Trigger download immediately
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(generatedPdfBlob);
-                link.download = `${fileName}.pdf`;
-                link.click();
-
-                processingView.classList.add('hidden');
-                successView.classList.remove('hidden');
-
-            } catch (error) {
-                handleError(error);
-            }
-        });
-
-        // --- Helpers ---
-
-        function updateProgress(current, total, startTime) {
-            const progressPercent = (current / total) * 100;
-            progressBar.style.width = `${progressPercent}%`;
-
-            const now = Date.now();
-            const timeElapsed = (now - startTime) / 1000;
-            const avgTimePerPage = timeElapsed / current;
-            const pagesRemaining = total - current;
-            const estimatedSecondsLeft = Math.ceil(avgTimePerPage * pagesRemaining);
-
-            if (estimatedSecondsLeft > 60) {
-                const mins = Math.floor(estimatedSecondsLeft / 60);
-                const secs = estimatedSecondsLeft % 60;
-                timeRemainingLabel.textContent = `~${mins}m ${secs}s remaining`;
-            } else {
-                timeRemainingLabel.textContent = `~${estimatedSecondsLeft}s remaining`;
-            }
-        }
-
-        function finishProcessing(doc, fileName) {
-            statusText.textContent = "Finalizing PDF file...";
-            generatedPdfBlob = doc.output('blob');
-            doc.save(`${fileName}.pdf`);
-            processingView.classList.add('hidden');
-            successView.classList.remove('hidden');
-        }
-
-        function handleError(error) {
-            console.error("Processing Error", error);
-            alert("An error occurred. The file might be encrypted or too large.");
-            processingView.classList.add('hidden');
-        }
-
-        function parsePageRange(rangeStr, maxPages) {
-            const pages = new Set();
-            const parts = rangeStr.split(',');
-            
-            parts.forEach(part => {
-                part = part.trim();
-                if (part.includes('-')) {
-                    const [start, end] = part.split('-').map(Number);
-                    if (!isNaN(start) && !isNaN(end)) {
-                        for (let i = start; i <= end; i++) {
-                            if (i >= 1 && i <= maxPages) pages.add(i);
-                        }
-                    }
-                } else {
-                    const page = Number(part);
-                    if (!isNaN(page) && page >= 1 && page <= maxPages) {
-                        pages.add(page);
-                    }
+                    el.classList.add('text-slate-500');
+                    el.classList.remove('text-slate-800');
                 }
             });
-            
-            return Array.from(pages).sort((a, b) => a - b);
+
+            // Handle Multi/Single Upload Logic
+            uploadInput.multiple = tool.multi;
+            resetUploadUI(false); // Clear files when switching tools? Yes for safety.
+            renderSettings(toolKey);
         }
 
-        // --- Download Again Logic ---
-        downloadAgainBtn.addEventListener('click', () => {
-            if (generatedPdfBlob) {
-                const fileName = currentTab === 'invert' 
-                    ? (fileNameInput.value.trim() || 'result') 
-                    : (fileNameSplitInput.value.trim() || 'result');
-                
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(generatedPdfBlob);
-                link.download = `${fileName}.pdf`;
-                link.click();
+        function renderSettings(toolKey) {
+            let html = '';
+            const commonInputClass = "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 focus:ring-2 focus:ring-mint-500 outline-none";
+            const btnClass = "w-full py-3.5 bg-mint-600 hover:bg-mint-700 text-white font-bold rounded-xl shadow-lg shadow-mint-500/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2";
+
+            if (toolKey === 'invert') {
+                html = `
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Filename</label><input id="out-name" value="dark_doc" class="${commonInputClass}"></div>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Quality</label>
+                        <select id="param-1" class="${commonInputClass}"><option value="72">72 PPI</option><option value="150" selected>150 PPI</option></select></div>
+                    </div>
+                    <button id="action-btn" class="${btnClass}"><i class="fa-solid fa-wand-magic-sparkles"></i> Invert</button>
+                `;
+            } else if (toolKey === 'split') {
+                html = `
+                    <div class="mb-4">
+                        <label class="text-xs font-bold text-slate-500 uppercase">Range (e.g. 1-3, 5)</label>
+                        <input id="param-1" placeholder="1-5" class="${commonInputClass}">
+                    </div>
+                    <div class="mb-4"><label class="text-xs font-bold text-slate-500 uppercase">Filename</label><input id="out-name" value="split" class="${commonInputClass}"></div>
+                    <button id="action-btn" class="${btnClass}"><i class="fa-solid fa-scissors"></i> Split</button>
+                `;
+            } else if (toolKey === 'merge') {
+                html = `
+                    <div class="mb-4"><label class="text-xs font-bold text-slate-500 uppercase">Filename</label><input id="out-name" value="merged" class="${commonInputClass}"></div>
+                    <button id="action-btn" class="${btnClass}"><i class="fa-solid fa-layer-group"></i> Merge</button>
+                `;
+            } else if (toolKey === 'compress') {
+                html = `
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Filename</label><input id="out-name" value="compressed" class="${commonInputClass}"></div>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Level</label>
+                        <select id="param-1" class="${commonInputClass}"><option value="0.9">Low</option><option value="0.7" selected>Medium</option><option value="0.5">High</option></select></div>
+                    </div>
+                    <button id="action-btn" class="${btnClass}"><i class="fa-solid fa-compress"></i> Compress</button>
+                `;
+            } 
+            // --- IMAGE TOOLS UI ---
+            else if (toolKey === 'img2pdf') {
+                html = `
+                    <div class="mb-4"><label class="text-xs font-bold text-slate-500 uppercase">Filename</label><input id="out-name" value="images_combined" class="${commonInputClass}"></div>
+                    <button id="action-btn" class="${btnClass}"><i class="fa-solid fa-file-pdf"></i> Convert to PDF</button>
+                `;
+            } else if (toolKey === 'invertimg') {
+                html = `
+                    <div class="mb-4"><label class="text-xs font-bold text-slate-500 uppercase">Filename</label><input id="out-name" value="dark_img" class="${commonInputClass}"></div>
+                    <button id="action-btn" class="${btnClass}"><i class="fa-solid fa-eye-dropper"></i> Invert Colors</button>
+                `;
+            } else if (toolKey === 'compressimg') {
+                html = `
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Filename</label><input id="out-name" value="optimized" class="${commonInputClass}"></div>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Quality</label>
+                        <select id="param-1" class="${commonInputClass}"><option value="0.9">High Quality</option><option value="0.6" selected>Balanced</option><option value="0.3">Small Size</option></select></div>
+                    </div>
+                    <button id="action-btn" class="${btnClass}"><i class="fa-solid fa-minimize"></i> Compress</button>
+                `;
             }
-        });
+
+            settingsPanel.innerHTML = html;
+            document.getElementById('action-btn').onclick = executeAction;
+        }
+
+
+        // --- File Handling ---
+        uploadInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        
+        // Drag & Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => dropZone.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }, false));
+        ['dragenter', 'dragover'].forEach(eName => dropZone.addEventListener(eName, () => dropZone.classList.add('active'), false));
+        ['dragleave', 'drop'].forEach(eName => dropZone.addEventListener(eName, () => dropZone.classList.remove('active'), false));
+        dropZone.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+
+        async function handleFiles(files) {
+            if (!files.length) return;
+            const tool = TOOLS[currentTool];
+
+            if (tool.multi) {
+                // Add to list
+                for (let f of files) {
+                    // Simple validation based on mode
+                    if (currentMode === 'pdf' && f.type === 'application/pdf') filesList.push(f);
+                    else if (currentMode === 'image' && f.type.startsWith('image/')) filesList.push(f);
+                }
+                updateMultiFileUI();
+            } else {
+                // Single file replace
+                const f = files[0];
+                if ((currentMode === 'pdf' && f.type === 'application/pdf') || (currentMode === 'image' && f.type.startsWith('image/'))) {
+                    filesList = [f];
+                    await updateSingleFileUI(f);
+                } else {
+                    alert(`Invalid file type for ${currentMode} mode.`);
+                }
+            }
+        }
+
+        async function updateSingleFileUI(file) {
+            document.getElementById('upload-placeholder').classList.add('hidden');
+            document.getElementById('multi-file-info').classList.add('hidden');
+            document.getElementById('file-info').classList.remove('hidden');
+            
+            document.getElementById('display-filename').textContent = file.name;
+            const meta = document.getElementById('file-meta');
+            const icon = document.getElementById('file-icon');
+            
+            settingsPanel.classList.remove('opacity-50', 'pointer-events-none');
+
+            if (currentMode === 'pdf') {
+                icon.className = "fa-solid fa-file-pdf text-red-500";
+                try {
+                    const url = URL.createObjectURL(file);
+                    pdfInstance = await pdfjsLib.getDocument(url).promise;
+                    meta.textContent = `${pdfInstance.numPages} Pages • ${(file.size/1024/1024).toFixed(2)} MB`;
+                } catch(e) { meta.textContent = "Error reading PDF"; }
+            } else {
+                icon.className = "fa-solid fa-file-image text-blue-500";
+                meta.textContent = `${(file.size/1024).toFixed(1)} KB`;
+            }
+        }
+
+        function updateMultiFileUI() {
+            if (filesList.length === 0) return resetUploadUI();
+            
+            document.getElementById('upload-placeholder').classList.add('hidden');
+            document.getElementById('file-info').classList.add('hidden');
+            document.getElementById('multi-file-info').classList.remove('hidden');
+            
+            document.getElementById('multi-file-count').textContent = filesList.length;
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+            
+            filesList.forEach((f, i) => {
+                const el = document.createElement('div');
+                el.className = "flex justify-between items-center bg-white p-2 rounded border border-slate-100 text-sm";
+                el.innerHTML = `<span class="truncate w-10/12">${i+1}. ${f.name}</span> <button onclick="removeFile(${i})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-xmark"></i></button>`;
+                list.appendChild(el);
+            });
+
+            if (filesList.length >= 1) { // Img2pdf needs at least 1, Merge needs 2 usually but 1 is okay to just "save as"
+                 settingsPanel.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        window.removeFile = (idx) => {
+            filesList.splice(idx, 1);
+            if (TOOLS[currentTool].multi) updateMultiFileUI();
+            else resetUploadUI();
+        };
+        
+        document.getElementById('remove-file').onclick = () => resetUploadUI();
+        document.getElementById('remove-all-files').onclick = () => resetUploadUI();
+
+        function resetUploadUI(keepFiles = false) {
+            if (!keepFiles) {
+                filesList = [];
+                pdfInstance = null;
+                uploadInput.value = '';
+            }
+            document.getElementById('upload-placeholder').classList.remove('hidden');
+            document.getElementById('file-info').classList.add('hidden');
+            document.getElementById('multi-file-info').classList.add('hidden');
+            settingsPanel.classList.add('opacity-50', 'pointer-events-none');
+        }
+
+
+        // ==========================
+        // ACTION EXECUTION
+        // ==========================
+        async function executeAction() {
+            const processingView = document.getElementById('processing-view');
+            const status = document.getElementById('status-text');
+            const pBar = document.getElementById('progress-bar');
+            
+            processingView.classList.remove('hidden');
+            
+            try {
+                const outName = document.getElementById('out-name').value;
+                const param1 = document.getElementById('param-1')?.value;
+                
+                // ---------------------
+                // PDF ACTIONS
+                // ---------------------
+                if (currentTool === 'invert') { // PDF Invert
+                    const { jsPDF } = window.jspdf;
+                    let doc;
+                    const total = pdfInstance.numPages;
+                    
+                    for(let i=1; i<=total; i++) {
+                        status.textContent = `Inverting page ${i}/${total}...`;
+                        pBar.style.width = `${(i/total)*100}%`;
+                        
+                        const page = await pdfInstance.getPage(i);
+                        const scale = parseInt(param1)/72;
+                        const viewport = page.getViewport({scale});
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = viewport.width; canvas.height = viewport.height;
+                        
+                        await page.render({canvasContext: ctx, viewport}).promise;
+                        
+                        // Invert
+                        ctx.globalCompositeOperation = 'difference';
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0,0, canvas.width, canvas.height);
+                        
+                        const pdfW = viewport.width*0.75; const pdfH = viewport.height*0.75;
+                        if (!doc) doc = new jsPDF({unit:'pt', format:[pdfW, pdfH]});
+                        else { doc.addPage([pdfW, pdfH]); doc.setPage(i); }
+                        
+                        doc.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0,0, pdfW, pdfH);
+                        await new Promise(r=>setTimeout(r,10));
+                    }
+                    finish(doc.output('blob'), outName, 'pdf');
+                }
+                else if (currentTool === 'split') {
+                    const { PDFDocument } = PDFLib;
+                    const srcDoc = await PDFDocument.load(await filesList[0].arrayBuffer());
+                    const newDoc = await PDFDocument.create();
+                    
+                    // Parse range
+                    const set = new Set();
+                    param1.split(',').forEach(p => {
+                        const [s,e] = p.trim().split('-').map(Number);
+                        if(s&&e) for(let i=s;i<=e;i++) set.add(i-1);
+                        else if(s) set.add(s-1);
+                    });
+                    const indices = Array.from(set).filter(i => i >= 0 && i < srcDoc.getPageCount()).sort((a,b)=>a-b);
+                    
+                    if (!indices.length) throw new Error("Invalid range");
+                    
+                    const pages = await newDoc.copyPages(srcDoc, indices);
+                    pages.forEach(p => newDoc.addPage(p));
+                    finish(new Blob([await newDoc.save()], {type:'application/pdf'}), outName, 'pdf');
+                }
+                else if (currentTool === 'merge') {
+                    const { PDFDocument } = PDFLib;
+                    const newDoc = await PDFDocument.create();
+                    for(let i=0; i<filesList.length; i++) {
+                        status.textContent = `Merging file ${i+1}...`;
+                         pBar.style.width = `${((i+1)/filesList.length)*100}%`;
+                        const src = await PDFDocument.load(await filesList[i].arrayBuffer());
+                        const pages = await newDoc.copyPages(src, src.getPageIndices());
+                        pages.forEach(p => newDoc.addPage(p));
+                        await new Promise(r=>setTimeout(r,10));
+                    }
+                    finish(new Blob([await newDoc.save()], {type:'application/pdf'}), outName, 'pdf');
+                }
+                else if (currentTool === 'compress') { // PDF Compress (Rasterize)
+                    // Same logic as Invert but without inversion
+                    const { jsPDF } = window.jspdf;
+                    let doc;
+                    const total = pdfInstance.numPages;
+                    const level = parseFloat(param1); // 0.9 to 0.5
+                    
+                    for(let i=1; i<=total; i++) {
+                        status.textContent = `Compressing page ${i}...`;
+                        pBar.style.width = `${(i/total)*100}%`;
+                        const page = await pdfInstance.getPage(i);
+                        // Lower scale for high compression
+                        const scale = level < 0.6 ? 1.0 : 1.5; 
+                        const viewport = page.getViewport({scale});
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = viewport.width; canvas.height = viewport.height;
+                        await page.render({canvasContext: ctx, viewport}).promise;
+                        
+                        const pdfW = viewport.width*0.75; const pdfH = viewport.height*0.75;
+                        if (!doc) doc = new jsPDF({unit:'pt', format:[pdfW, pdfH]});
+                        else { doc.addPage([pdfW, pdfH]); doc.setPage(i); }
+                        doc.addImage(canvas.toDataURL('image/jpeg', level), 'JPEG', 0,0, pdfW, pdfH);
+                        await new Promise(r=>setTimeout(r,10));
+                    }
+                     finish(doc.output('blob'), outName, 'pdf');
+                }
+
+                // ---------------------
+                // IMAGE ACTIONS
+                // ---------------------
+                else if (currentTool === 'img2pdf') {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF(); // defaults A4
+                    // Clear first page
+                    doc.deletePage(1);
+
+                    for(let i=0; i<filesList.length; i++) {
+                        status.textContent = `Processing image ${i+1}...`;
+                        pBar.style.width = `${((i+1)/filesList.length)*100}%`;
+                        
+                        const img = await loadImage(filesList[i]);
+                        // Fit to A4 logic or Fit to Image? Let's Fit Image to PDF Page size
+                        // Actually, better to set Page size to Image size
+                        // pt units. 1px = 0.75pt
+                        const width = img.width * 0.75;
+                        const height = img.height * 0.75;
+                        
+                        doc.addPage([width, height]);
+                        doc.addImage(img, 'JPEG', 0, 0, width, height);
+                        await new Promise(r=>setTimeout(r,10));
+                    }
+                    finish(doc.output('blob'), outName, 'pdf');
+                }
+                else if (currentTool === 'invertimg' || currentTool === 'compressimg') {
+                    const file = filesList[0];
+                    status.textContent = "Processing image...";
+                    const img = await loadImage(file);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width; canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    
+                    if (currentTool === 'invertimg') {
+                        ctx.globalCompositeOperation = 'difference';
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0,0, canvas.width, canvas.height);
+                    }
+                    
+                    let quality = 0.9;
+                    if (currentTool === 'compressimg') quality = parseFloat(param1);
+                    
+                    canvas.toBlob(blob => {
+                        finish(blob, outName, 'jpg');
+                    }, 'image/jpeg', quality);
+                }
+
+            } catch(e) {
+                console.error(e);
+                alert("Error during processing: " + e.message);
+                processingView.classList.add('hidden');
+            }
+        }
+
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        function finish(blob, name, ext) {
+            resultBlob = blob;
+            resultExt = ext;
+            document.getElementById('processing-view').classList.add('hidden');
+            document.getElementById('success-view').classList.remove('hidden');
+            
+            // Auto download? No, let user click.
+            // But we need to update the download button logic
+            const btn = document.getElementById('download-again');
+            btn.onclick = () => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(resultBlob);
+                link.download = `${name}.${resultExt}`;
+                link.click();
+            };
+        }
 
     </script>
 </body>
