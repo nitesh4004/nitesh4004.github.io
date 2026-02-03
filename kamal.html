@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KaMaL - KML Boundary Maker (High Zoom)</title>
+    <title>KaMaL - KML & GeoJSON Boundary Maker</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -152,7 +152,7 @@
         .section-content {
             overflow: hidden;
             transition: max-height 0.3s ease-out, opacity 0.3s ease-out, margin-bottom 0.3s;
-            max-height: 500px;
+            max-height: 600px;
             opacity: 1;
             margin-bottom: 15px;
         }
@@ -507,6 +507,34 @@
         .slider-btn:active {
             transform: scale(0.95);
         }
+
+        /* TOGGLE SWITCH STYLE */
+        .format-toggle-container {
+            display: flex;
+            background-color: #334155;
+            padding: 2px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        .format-btn {
+            flex: 1;
+            text-align: center;
+            padding: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #94a3b8;
+        }
+        .format-btn.active {
+            background-color: #00d2d3;
+            color: #0f172a;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .format-btn:hover:not(.active) {
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -561,20 +589,31 @@
                     </select>
                 </div>
 
-                <input type="text" id="kmlFileName" placeholder="Filename (e.g. My_Farm)" class="sidebar-input mb-2 mt-2">
+                <!-- NEW FILE FORMAT TOGGLE -->
+                <div class="mb-2">
+                    <label class="text-[11px] text-gray-400 font-bold mb-1 block">WORK MODE (FORMAT)</label>
+                    <div class="format-toggle-container">
+                        <div id="btnKml" class="format-btn active" onclick="setFormat('kml')">KML (.kml)</div>
+                        <div id="btnGeo" class="format-btn" onclick="setFormat('geojson')">GEOJSON (.json)</div>
+                    </div>
+                    <input type="hidden" id="fileFormatMode" value="kml">
+                </div>
+
+                <input type="text" id="exportFileName" placeholder="Filename (e.g. My_Farm)" class="sidebar-input mb-2 mt-2">
                 
                 <div class="flex gap-2 mt-2">
-                    <button id="downloadBtn" class="action-btn btn-dark" style="margin-top:0;" title="Download KML">
+                    <button id="downloadBtn" class="action-btn btn-dark" style="margin-top:0;" title="Download Data">
                         <i class="fa-solid fa-download"></i> Save All
                     </button>
-                    <button onclick="document.getElementById('kmlFileInput').click()" class="action-btn btn-outline" style="margin-top:0;" title="Upload KML">
+                    <button onclick="document.getElementById('fileInput').click()" class="action-btn btn-outline" style="margin-top:0;" title="Upload File">
                         <i class="fa-solid fa-upload"></i> Load
                     </button>
                     <button id="clearBtn" class="action-btn btn-secondary" style="margin-top:0; width: auto;" title="Clear All">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
-                <input type="file" id="kmlFileInput" accept=".kml" style="display: none;" onchange="handleFileUpload(this)">
+                <!-- Updated accept attribute -->
+                <input type="file" id="fileInput" accept=".kml,.json,.geojson" style="display: none;" onchange="handleFileUpload(this)">
 
                 <div class="mt-3 border-t border-slate-700 pt-2">
                     <div class="text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wider">Map Controls</div>
@@ -1096,7 +1135,7 @@
                     <div class="boundary-actions flex">
                          <button class="icon-btn eye ${activeClass}" onclick="toggleVisibility(${layerId})" title="Toggle Visibility"><i class="fa-solid ${eyeIcon}"></i></button>
                         <button class="icon-btn" onclick="openModalById(${layerId})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                        <button class="icon-btn" onclick="downloadSingleLayer(${layerId})" title="Download KML"><i class="fa-solid fa-file-arrow-down"></i></button>
+                        <button class="icon-btn" onclick="downloadSingleLayer(${layerId})" title="Download Single File"><i class="fa-solid fa-file-arrow-down"></i></button>
                         <button class="icon-btn delete" onclick="openDeleteConfirm(${layerId})" title="Delete"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `;
@@ -1168,20 +1207,67 @@
             }
         }
 
-        // KML Upload
+        // --- FILE FORMAT TOGGLE LOGIC ---
+        window.setFormat = function(fmt) {
+            document.getElementById('fileFormatMode').value = fmt;
+            
+            // Toggle Buttons UI
+            var btnKml = document.getElementById('btnKml');
+            var btnGeo = document.getElementById('btnGeo');
+            
+            if(fmt === 'kml') {
+                btnKml.classList.add('active');
+                btnGeo.classList.remove('active');
+            } else {
+                btnGeo.classList.add('active');
+                btnKml.classList.remove('active');
+            }
+            
+            showToast("Mode Switched: " + fmt.toUpperCase());
+        };
+
+        // KML/GeoJSON Upload
         function handleFileUpload(input) {
             var file = input.files[0];
             if (!file) return;
+            
+            var fileName = file.name.toLowerCase();
 
             var reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    var kmlText = e.target.result;
-                    var parser = new DOMParser();
-                    var kmlDom = parser.parseFromString(kmlText, 'text/xml');
-                    var geojson = toGeoJSON.kml(kmlDom);
+                    var fileContent = e.target.result;
+                    var geojson;
 
-                    if (geojson.features.length === 0) { showToast("⚠️ No valid features"); return; }
+                    // SMART DETECTION: Check extension first
+                    if (fileName.endsWith('.kml')) {
+                        // Handle KML
+                        var parser = new DOMParser();
+                        var kmlDom = parser.parseFromString(fileContent, 'text/xml');
+                        geojson = toGeoJSON.kml(kmlDom);
+                    } else if (fileName.endsWith('.json') || fileName.endsWith('.geojson')) {
+                        // Handle GeoJSON
+                        geojson = JSON.parse(fileContent);
+                    } else {
+                        // Fallback: Try to parse as JSON, if fail try KML
+                        try {
+                            geojson = JSON.parse(fileContent);
+                        } catch(err) {
+                            var parser = new DOMParser();
+                            var kmlDom = parser.parseFromString(fileContent, 'text/xml');
+                            geojson = toGeoJSON.kml(kmlDom);
+                        }
+                    }
+
+                    if (!geojson || !geojson.features || geojson.features.length === 0) { 
+                        // If it's a single feature, wrap it
+                        if(geojson && geojson.type === 'Feature') {
+                            geojson = { type: "FeatureCollection", features: [geojson] };
+                        } else {
+                            showToast("⚠️ No valid features found"); 
+                            return; 
+                        }
+                    }
 
                     L.geoJSON(geojson, {
                         onEachFeature: function(feature, layer) {
@@ -1191,7 +1277,7 @@
                             layer.feature.properties.visible = true; // Default visible on import
                             
                             if (!layer.feature.properties.name) layer.feature.properties.name = "Imported " + layerCounter++;
-                            if (!layer.feature.properties.description) layer.feature.properties.description = "Imported KML";
+                            if (!layer.feature.properties.description) layer.feature.properties.description = "Imported File";
 
                             if (layer.setStyle) layer.setStyle({ color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 });
                             
@@ -1208,8 +1294,11 @@
                     if (drawnItems.getBounds().isValid()) map.fitBounds(drawnItems.getBounds());
                     updateSidePanel();
                     saveData(); 
-                    showToast("✅ KML Imported");
-                } catch (error) { console.error(error); showToast("❌ Error parsing KML"); }
+                    showToast("✅ File Imported Successfully");
+                } catch (error) { 
+                    console.error(error); 
+                    showToast("❌ Error parsing file"); 
+                }
                 input.value = '';
             };
             reader.readAsText(file);
@@ -1230,46 +1319,56 @@
             if(layer) openModal(layer);
         };
 
-        // --- SINGLE LAYER DOWNLOAD FUNCTION ---
+        // --- SINGLE LAYER DOWNLOAD FUNCTION (Smart) ---
         window.downloadSingleLayer = function(id) {
             var layer = drawnItems.getLayer(id);
             if(!layer) return;
-
+            
+            // Check Format Mode
+            var format = document.getElementById('fileFormatMode').value;
             var geojson = layer.toGeoJSON();
+
             // Preserve properties
             if (layer.feature && layer.feature.properties) {
                 geojson.properties = JSON.parse(JSON.stringify(layer.feature.properties));
-                delete geojson.properties.visible; // Don't export internal flag
+                delete geojson.properties.visible; 
             }
-
-            // Apply styles for KML
-            if (geojson.geometry.type === 'Polygon' || geojson.geometry.type === 'MultiPolygon') {
-                geojson.properties['stroke'] = '#ff0000';
-                geojson.properties['stroke-width'] = 2;
-                geojson.properties['stroke-opacity'] = 1;
-                geojson.properties['fill'] = '#ffffff';
-                geojson.properties['fill-opacity'] = 0;
-            }
-
-            var featureCollection = { "type": "FeatureCollection", "features": [geojson] };
             
             // Generate Filename
             var rawName = geojson.properties.name || "field";
-            var fileName = rawName.replace(/[^a-z0-9_\-]/gi, '_') + ".kml";
+            var fileName = rawName.replace(/[^a-z0-9_\-]/gi, '_');
 
-            var kml = tokml(featureCollection, { simplestyle: true, name: 'name', description: 'description' });
-            
-            var blob = new Blob([kml], {type: "application/vnd.google-earth.kml+xml"});
+            if (format === 'kml') {
+                // Apply styles for KML
+                if (geojson.geometry.type === 'Polygon' || geojson.geometry.type === 'MultiPolygon') {
+                    geojson.properties['stroke'] = '#ff0000';
+                    geojson.properties['stroke-width'] = 2;
+                    geojson.properties['stroke-opacity'] = 1;
+                    geojson.properties['fill'] = '#ffffff';
+                    geojson.properties['fill-opacity'] = 0;
+                }
+                var featureCollection = { "type": "FeatureCollection", "features": [geojson] };
+                var kml = tokml(featureCollection, { simplestyle: true, name: 'name', description: 'description' });
+                downloadBlob(kml, fileName + ".kml", "application/vnd.google-earth.kml+xml");
+            } else {
+                // GeoJSON Download
+                var jsonStr = JSON.stringify(geojson, null, 2);
+                downloadBlob(jsonStr, fileName + ".geojson", "application/geo+json");
+            }
+        };
+        
+        // Helper to trigger download
+        function downloadBlob(content, filename, mimeType) {
+            var blob = new Blob([content], {type: mimeType});
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = fileName;
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            
-            showToast("Downloaded " + fileName);
-        };
+            showToast("Downloaded " + filename);
+        }
 
         // UI Logic - OPEN MODAL
         function openModal(layer) {
@@ -1716,18 +1815,18 @@
                  description = `Centroid is ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
             } else {
                  try {
-                     var areaSqMeters = turf.area(geojson).toFixed(2);
-                     var lengthKm = turf.length(geojson, {units: 'kilometers'});
-                     var perimeterM = (lengthKm * 1000).toFixed(2);
-                     
-                     // Centroid
-                     var center = turf.centroid(geojson);
-                     var cLat = center.geometry.coordinates[1].toFixed(5);
-                     var cLng = center.geometry.coordinates[0].toFixed(5);
+                      var areaSqMeters = turf.area(geojson).toFixed(2);
+                      var lengthKm = turf.length(geojson, {units: 'kilometers'});
+                      var perimeterM = (lengthKm * 1000).toFixed(2);
+                      
+                      // Centroid
+                      var center = turf.centroid(geojson);
+                      var cLat = center.geometry.coordinates[1].toFixed(5);
+                      var cLng = center.geometry.coordinates[0].toFixed(5);
 
-                     description = `Area is ${areaSqMeters} m², Perimeter is ${perimeterM} m, Centroid is ${cLat}, ${cLng}`;
+                      description = `Area is ${areaSqMeters} m², Perimeter is ${perimeterM} m, Centroid is ${cLat}, ${cLng}`;
                  } catch (err) {
-                     description = "Created on " + new Date().toLocaleDateString();
+                      description = "Created on " + new Date().toLocaleDateString();
                  }
             }
 
@@ -1778,7 +1877,7 @@
             showToast("Changes Saved");
         });
 
-        // Download Logic
+        // Download Logic (SAVE ALL)
         document.getElementById('downloadBtn').addEventListener('click', function() {
             var features = [];
             drawnItems.eachLayer(function(layer) {
@@ -1800,23 +1899,23 @@
 
             if (features.length === 0) { showToast("List is empty"); return; }
 
-            var fileNameInput = document.getElementById('kmlFileName').value.trim();
+            var fileNameInput = document.getElementById('exportFileName').value.trim();
             var fileName = fileNameInput || "My_Boundaries"; 
             fileName = fileName.replace(/[^a-z0-9_\-]/gi, '_');
 
-            var data = { "type": "FeatureCollection", "features": features };
-            var kml = tokml(data, { simplestyle: true, name: 'name', description: 'description' });
+            var format = document.getElementById('fileFormatMode').value;
 
-            var blob = new Blob([kml], {type: "application/vnd.google-earth.kml+xml"});
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = fileName + ".kml";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            showToast("Downloaded " + fileName + ".kml");
+            if (format === 'kml') {
+                // KML EXPORT
+                var data = { "type": "FeatureCollection", "features": features };
+                var kml = tokml(data, { simplestyle: true, name: 'name', description: 'description' });
+                downloadBlob(kml, fileName + ".kml", "application/vnd.google-earth.kml+xml");
+            } else {
+                // GEOJSON EXPORT
+                var data = { "type": "FeatureCollection", "features": features };
+                var jsonStr = JSON.stringify(data, null, 2);
+                downloadBlob(jsonStr, fileName + ".geojson", "application/geo+json");
+            }
         });
 
         document.getElementById('clearBtn').addEventListener('click', function() {
