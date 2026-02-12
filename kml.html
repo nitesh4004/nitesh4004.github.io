@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KML Merger Tool</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom styles for the drag-and-drop zone */
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+        .drop-zone.dragover {
+            border-color: #3b82f6; /* Tailwind blue-500 */
+            background-color: #eff6ff; /* Tailwind blue-50 */
+        }
+        
+        /* Toast notification animations */
+        .toast-enter {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        .toast-enter-active {
+            transform: translateX(0);
+            opacity: 1;
+            transition: all 0.3s ease-out;
+        }
+        .toast-exit {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .toast-exit-active {
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease-in;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="map" class="text-blue-600 w-6 h-6"></i>
+                    <span class="font-bold text-xl tracking-tight text-gray-900">KML Merger</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        
+        <!-- Header Section -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">Merge your KML files easily</h1>
+            <p class="mt-3 text-lg text-gray-500 sm:mt-4">
+                Combine multiple Google Earth KML files into a single master file. All processing happens locally in your browser.
+            </p>
+        </div>
+
+        <!-- App Container -->
+        <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            <div class="p-6 sm:p-8">
+                
+                <!-- Drag and Drop Zone -->
+                <div id="dropZone" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-10 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50">
+                    <i data-lucide="upload-cloud" class="w-12 h-12 text-gray-400 mb-4"></i>
+                    <p class="text-lg font-medium text-gray-700 mb-1">Drag and drop KML files here</p>
+                    <p class="text-sm text-gray-500 mb-4">or click to browse your files</p>
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-md transition-colors shadow-sm" onclick="document.getElementById('fileInput').click()">
+                        Select Files
+                    </button>
+                    <input type="file" id="fileInput" class="hidden" multiple accept=".kml,application/vnd.google-earth.kml+xml">
+                </div>
+
+                <!-- File List Section -->
+                <div id="fileListContainer" class="mt-8 hidden">
+                    <div class="flex justify-between items-end mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <i data-lucide="layers" class="w-5 h-5 mr-2 text-gray-500"></i>
+                            Files to merge (<span id="fileCount">0</span>)
+                        </h3>
+                        <button id="clearAllBtn" class="text-sm text-red-600 hover:text-red-800 font-medium transition-colors">
+                            Clear all
+                        </button>
+                    </div>
+                    
+                    <ul id="fileList" class="divide-y divide-gray-200 border border-gray-200 rounded-md max-h-60 overflow-y-auto bg-gray-50">
+                        <!-- File items will be injected here via JS -->
+                    </ul>
+
+                    <!-- Action Area -->
+                    <div class="mt-6 flex flex-col sm:flex-row gap-4 justify-end">
+                        <button id="mergeBtn" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-md transition-colors shadow-sm flex items-center justify-center">
+                            <i data-lucide="file-check-2" class="w-5 h-5 mr-2"></i>
+                            Merge and Download
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="mt-10 bg-blue-50 border border-blue-100 rounded-lg p-6">
+            <h4 class="font-semibold text-blue-900 mb-2 flex items-center">
+                <i data-lucide="info" class="w-5 h-5 mr-2"></i> How it works
+            </h4>
+            <ul class="list-disc list-inside text-sm text-blue-800 space-y-1">
+                <li>Select two or more KML files from your device.</li>
+                <li>The tool will extract Placemarks, Routes, and Polygons from each file.</li>
+                <li>Each imported file's contents will be placed in its own separate Folder within the merged KML to keep things organized.</li>
+                <li>Click <strong>Merge and Download</strong> to save the combined file.</li>
+            </ul>
+        </div>
+
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // State Management
+        let selectedFiles = [];
+
+        // DOM Elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileListContainer = document.getElementById('fileListContainer');
+        const fileList = document.getElementById('fileList');
+        const fileCount = document.getElementById('fileCount');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const mergeBtn = document.getElementById('mergeBtn');
+
+        // Event Listeners for Drag and Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+        clearAllBtn.addEventListener('click', clearAllFiles);
+        mergeBtn.addEventListener('click', processMerge);
+
+        // Allow clicking the dropzone to trigger input
+        dropZone.addEventListener('click', (e) => {
+            if (e.target !== fileInput && e.target.tagName !== 'BUTTON') {
+                fileInput.click();
+            }
+        });
+
+        // Handlers
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            processFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            processFiles(files);
+            // Reset input so the same file can be selected again if needed
+            fileInput.value = ''; 
+        }
+
+        function processFiles(files) {
+            let addedCount = 0;
+            let invalidCount = 0;
+
+            Array.from(files).forEach(file => {
+                // Check if file is a .kml
+                if (file.name.toLowerCase().endsWith('.kml')) {
+                    // Check for duplicates
+                    if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                        selectedFiles.push(file);
+                        addedCount++;
+                    }
+                } else {
+                    invalidCount++;
+                }
+            });
+
+            if (addedCount > 0) {
+                renderFileList();
+                showToast(`Added ${addedCount} file(s).`, 'success');
+            }
+            if (invalidCount > 0) {
+                showToast(`${invalidCount} file(s) skipped. Only .kml files are supported.`, 'error');
+            }
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            
+            if (selectedFiles.length === 0) {
+                fileListContainer.classList.add('hidden');
+                return;
+            }
+
+            fileListContainer.classList.remove('hidden');
+            fileCount.textContent = selectedFiles.length;
+
+            selectedFiles.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between py-3 px-4 bg-white hover:bg-gray-50 transition-colors';
+                
+                li.innerHTML = `
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <i data-lucide="file-code" class="w-5 h-5 text-blue-500 flex-shrink-0"></i>
+                        <div class="flex flex-col truncate">
+                            <span class="text-sm font-medium text-gray-900 truncate">${file.name}</span>
+                            <span class="text-xs text-gray-500">${formatBytes(file.size)}</span>
+                        </div>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors" title="Remove file">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                `;
+                fileList.appendChild(li);
+            });
+            
+            lucide.createIcons(); // Re-initialize icons for new DOM elements
+        }
+
+        window.removeFile = function(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        function clearAllFiles() {
+            selectedFiles = [];
+            renderFileList();
+        }
+
+        // Custom Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-blue-600';
+            let icon = 'info';
+            
+            if (type === 'success') {
+                bgClass = 'bg-green-600';
+                icon = 'check-circle';
+            } else if (type === 'error') {
+                bgClass = 'bg-red-600';
+                icon = 'alert-circle';
+            }
+
+            toast.className = `${bgClass} text-white px-4 py-3 rounded shadow-lg flex items-center space-x-2 toast-enter`;
+            
+            toast.innerHTML = `
+                <i data-lucide="${icon}" class="w-5 h-5"></i>
+                <span class="text-sm font-medium">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons({ root: toast });
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                toast.classList.add('toast-enter-active');
+            });
+
+            // Remove toast after delay
+            setTimeout(() => {
+                toast.classList.remove('toast-enter', 'toast-enter-active');
+                toast.classList.add('toast-exit');
+                
+                requestAnimationFrame(() => {
+                    toast.classList.add('toast-exit-active');
+                });
+                
+                setTimeout(() => {
+                    if (container.contains(toast)) {
+                        container.removeChild(toast);
+                    }
+                }, 300); // match CSS transition duration
+            }, 4000);
+        }
+
+        // --- Core KML Merging Logic --- //
+        async function processMerge() {
+            if (selectedFiles.length < 1) {
+                showToast("Please add at least one KML file.", "error");
+                return;
+            }
+
+            const originalBtnText = mergeBtn.innerHTML;
+            mergeBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 mr-2 animate-spin"></i> Merging...`;
+            mergeBtn.disabled = true;
+            lucide.createIcons({ root: mergeBtn });
+
+            try {
+                const kmlNamespace = "http://www.opengis.net/kml/2.2";
+                
+                // Create Base Document
+                const mergedDoc = document.implementation.createDocument(kmlNamespace, "kml", null);
+                const rootKml = mergedDoc.documentElement;
+
+                const mainDocument = mergedDoc.createElementNS(kmlNamespace, "Document");
+                const mainName = mergedDoc.createElementNS(kmlNamespace, "name");
+                mainName.textContent = "Merged_KML_Data";
+                mainDocument.appendChild(mainName);
+                rootKml.appendChild(mainDocument);
+
+                const parser = new DOMParser();
+
+                for (const file of selectedFiles) {
+                    try {
+                        const text = await file.text();
+                        const xmlDoc = parser.parseFromString(text, "text/xml");
+
+                        // Validate parsing
+                        const parseError = xmlDoc.querySelector("parsererror");
+                        if (parseError) {
+                            console.error(`XML Parse Error in ${file.name}`, parseError);
+                            showToast(`Skipped ${file.name} due to invalid XML format.`, 'error');
+                            continue;
+                        }
+
+                        // Create a Folder for this file's contents to maintain organization
+                        const fileFolder = mergedDoc.createElementNS(kmlNamespace, "Folder");
+                        const folderName = mergedDoc.createElementNS(kmlNamespace, "name");
+                        
+                        // Use filename without extension as folder name
+                        folderName.textContent = file.name.replace(/\.[^/.]+$/, ""); 
+                        fileFolder.appendChild(folderName);
+
+                        // Extract content logic
+                        const sourceKml = xmlDoc.documentElement;
+                        let elementsToExtract = [];
+
+                        // Find the primary container in the source file
+                        const sourceDocs = xmlDoc.getElementsByTagNameNS("*", "Document");
+                        const sourceFolders = xmlDoc.getElementsByTagNameNS("*", "Folder");
+
+                        if (sourceDocs.length > 0) {
+                             elementsToExtract = Array.from(sourceDocs[0].children);
+                        } else if (sourceFolders.length > 0) {
+                             elementsToExtract = Array.from(sourceFolders[0].children);
+                        } else {
+                             // Fallback: get direct children of <kml>
+                             elementsToExtract = Array.from(sourceKml.children);
+                        }
+
+                        // Append extracted elements to the new folder
+                        elementsToExtract.forEach(child => {
+                            // Skip copying the Document's <name> and <open> tags to avoid redundancy in the folder
+                            if (child.localName !== 'name' && child.localName !== 'open') {
+                                const importedNode = mergedDoc.importNode(child, true);
+                                fileFolder.appendChild(importedNode);
+                            }
+                        });
+
+                        mainDocument.appendChild(fileFolder);
+
+                    } catch (err) {
+                        console.error(`Error reading ${file.name}`, err);
+                        showToast(`Failed to process ${file.name}`, 'error');
+                    }
+                }
+
+                // Serialize back to string
+                const serializer = new XMLSerializer();
+                let mergedXmlString = serializer.serializeToString(mergedDoc);
+
+                // Prepend standard XML declaration
+                mergedXmlString = '<?xml version="1.0" encoding="UTF-8"?>\n' + mergedXmlString;
+
+                // Create and trigger download
+                downloadBlob(mergedXmlString, 'Merged_Map_Data.kml', 'application/vnd.google-earth.kml+xml');
+                
+                showToast("Files merged successfully! Download starting.", "success");
+
+            } catch (err) {
+                console.error("Global merge error", err);
+                showToast("An unexpected error occurred during merging.", "error");
+            } finally {
+                // Restore button state
+                mergeBtn.innerHTML = originalBtnText;
+                mergeBtn.disabled = false;
+                lucide.createIcons({ root: mergeBtn });
+            }
+        }
+
+        function downloadBlob(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        }
+
+    </script>
+</body>
+</html>
