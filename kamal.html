@@ -250,7 +250,7 @@
             top: 0;
             bottom: 0;
             width: 3px;
-            background-color: #00d2d3;
+            background-color: #00d2d3; /* Kept UI Cyan */
             border-radius: 3px 0 0 3px;
         }
         .boundary-item:hover {
@@ -341,7 +341,7 @@
         /* Custom Edit Handles (Dots) */
         .leaflet-editing-icon {
             border-radius: 50% !important;
-            background-color: #00d2d3 !important;
+            background-color: #ef4444 !important; /* RED Dots to match Red Outline */
             border: 2px solid #fff !important;
             width: 10px !important; /* Smaller dots */
             height: 10px !important;
@@ -353,7 +353,7 @@
         .leaflet-editing-icon:hover {
             transform: scale(1.2);
             background-color: #fff !important;
-            border-color: #00d2d3 !important;
+            border-color: #ef4444 !important;
         }
 
         /* --- UPDATED TOOLBAR SCALING LOGIC --- */
@@ -920,22 +920,25 @@
             }
 
             if (show) {
+                // RED OUTLINE / NO FILL STYLE (Updated per request)
+                // Color: #ff0000 (Red)
+                // fillOpacity: 0.0 (Transparent)
                 drawControl = new L.Control.Draw({
                     position: pos,
                     draw: {
                         // --- ENABLED ALL TOOLS ---
-                        polyline: { shapeOptions: { color: '#00d2d3', weight: 3 } }, 
+                        polyline: { shapeOptions: { color: '#ff0000', weight: 3 } }, 
                         marker: { icon: customMarkerIcon },
                         circle: {
-                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                            shapeOptions: { color: '#ff0000', weight: 3, opacity: 1, fillOpacity: 0 }
                         },
-                        circlemarker: { shapeOptions: { color: '#00d2d3', opacity: 1, fillOpacity: 0.5 } },
+                        circlemarker: { shapeOptions: { color: '#ff0000', opacity: 1, fillOpacity: 0 } },
                         polygon: {
                             allowIntersection: false, showArea: true,
-                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                            shapeOptions: { color: '#ff0000', weight: 3, opacity: 1, fillOpacity: 0 }
                         },
                         rectangle: {
-                            shapeOptions: { color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 }
+                            shapeOptions: { color: '#ff0000', weight: 3, opacity: 1, fillOpacity: 0 }
                         }
                     },
                     edit: { featureGroup: drawnItems, remove: true }
@@ -1027,7 +1030,8 @@
                         }
 
                         if (feature.geometry.type !== 'Point') {
-                            if(layer.setStyle) layer.setStyle({ color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 });
+                            // RED OUTLINE / NO FILL STYLE on Load
+                            if(layer.setStyle) layer.setStyle({ color: '#ff0000', weight: 3, opacity: 1, fillOpacity: 0 });
                         } else {
                             layer.setIcon(customMarkerIcon);
                         }
@@ -1150,9 +1154,16 @@
                     </div>
                 `;
                 
+                // HOVER EFFECTS - RED OUTLINE STYLE
                 if(isVisible) {
-                    div.addEventListener('mouseenter', function() { layer.setStyle({ weight: 5, fillOpacity: 0.3 }); });
-                    div.addEventListener('mouseleave', function() { layer.setStyle({ weight: 3, fillOpacity: 0.1 }); });
+                    div.addEventListener('mouseenter', function() { 
+                        // Thicken red line on hover, ensure NO fill
+                        layer.setStyle({ weight: 5, fillOpacity: 0.05 }); 
+                    });
+                    div.addEventListener('mouseleave', function() { 
+                        // Return to normal
+                        layer.setStyle({ weight: 3, fillOpacity: 0 }); 
+                    });
                 }
                 
                 listContainer.appendChild(div);
@@ -1195,7 +1206,8 @@
                     layer.setOpacity(1);
                     layer.setZIndexOffset(0);
                 } else {
-                    layer.setStyle({ opacity: 1, fillOpacity: 0.1, stroke: true, interactive: true });
+                    // Force Red Outline / No Fill on Show
+                    layer.setStyle({ opacity: 1, fillOpacity: 0, stroke: true, interactive: true });
                 }
                 
                 if (layer.feature.properties.name) {
@@ -1310,7 +1322,8 @@
                             if (!layer.feature.properties.name) layer.feature.properties.name = "Imported " + layerCounter++;
                             if (!layer.feature.properties.description) layer.feature.properties.description = "Imported File";
 
-                            if (layer.setStyle) layer.setStyle({ color: '#00d2d3', weight: 3, opacity: 1, fillOpacity: 0.1 });
+                            // RED OUTLINE / NO FILL STYLE on Import
+                            if (layer.setStyle) layer.setStyle({ color: '#ff0000', weight: 3, opacity: 1, fillOpacity: 0 });
                             
                             // SAVE ORIGINAL GEOMETRY
                             layer.feature.properties.originalGeometry = JSON.parse(JSON.stringify(feature));
@@ -1929,6 +1942,9 @@
             layer.feature.properties.originalGeometry = JSON.parse(JSON.stringify(geojson));
             
             layerCounter++;
+
+            // RED OUTLINE / NO FILL STYLE on Create
+            if (layer.setStyle) layer.setStyle({ color: '#ff0000', weight: 3, opacity: 1, fillOpacity: 0 });
 
             layer.on('click', function() { openModal(layer); });
             var tooltipOffset = (type === 'marker') ? [0, -12] : [0, 0];
